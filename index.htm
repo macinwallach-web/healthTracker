@@ -4,17 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HealthTracker - Weight History</title>
-    <!-- Tailwind CSS CDN for instant, premium look -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-4">
     <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
         <!-- Header -->
-        <div class="mb-6">
-            <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">HealthTracker</h1>
-            <p class="text-xs text-slate-400 uppercase tracking-widest mt-1">First Test • Weight History</p>
+        <div class="mb-6 flex items-start justify-between gap-2">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">HealthTracker</h1>
+                <p id="statusText" class="text-xs text-slate-400 uppercase tracking-widest mt-1">Weight History • healthtracker-b7c01</p>
+            </div>
+            <button id="logoutBtn" type="button" class="hidden text-xs font-medium text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">
+                Sign out
+            </button>
         </div>
-        
+
+        <!-- Login Form (shown when Firestore rules require authentication) -->
+        <form id="loginForm" class="mb-5 space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+            <p class="text-xs font-medium text-slate-600">Sign in to read <code class="text-slate-800">weight_records</code>:</p>
+            <input id="emailInput" type="email" required placeholder="Email"
+                   class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300">
+            <input id="passwordInput" type="password" required placeholder="Password"
+                   class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300">
+            <button id="loginBtn" type="submit"
+                    class="w-full py-2 px-4 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
+                Sign in
+            </button>
+            <p id="errorMsg" class="text-xs text-rose-600 hidden"></p>
+        </form>
+
         <!-- Table Container -->
         <div class="overflow-hidden border border-slate-100 rounded-xl">
             <table class="min-w-full divide-y divide-slate-100">
@@ -25,22 +43,11 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Weight</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 bg-white">
-                    <!-- Mock Data -->
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-4 py-3.5 text-sm text-slate-700 font-medium">Nov 22, 2026</td>
-                        <td class="px-4 py-3.5 text-sm text-slate-400">08:30 AM</td>
-                        <td class="px-4 py-3.5 text-sm font-bold text-slate-800">74.5 kg</td>
-                    </tr>
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-4 py-3.5 text-sm text-slate-700 font-medium">Nov 20, 2026</td>
-                        <td class="px-4 py-3.5 text-sm text-slate-400">08:15 AM</td>
-                        <td class="px-4 py-3.5 text-sm font-bold text-slate-800">74.8 kg</td>
-                    </tr>
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-4 py-3.5 text-sm text-slate-700 font-medium">Nov 18, 2026</td>
-                        <td class="px-4 py-3.5 text-sm text-slate-400">08:45 AM</td>
-                        <td class="px-4 py-3.5 text-sm font-bold text-slate-800">75.2 kg</td>
+                <tbody id="recordsBody" class="divide-y divide-slate-100 bg-white">
+                    <tr>
+                        <td colspan="3" class="px-4 py-6 text-center text-sm text-slate-400">
+                            Waiting for sign-in...
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -54,5 +61,174 @@
             <span class="text-xs text-slate-400">Hosted via Firebase</span>
         </div>
     </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+        import {
+            getFirestore,
+            collection,
+            onSnapshot,
+            query,
+            limit
+        } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+        // Wklej swoje dane z Firebase Console -> Project settings -> General -> Your apps
+        const firebaseConfig = {
+            apiKey: "AIzaSyCeXDgWy4p1qQO6UI22uu1p38STXOG2UzE",
+            authDomain: "healthtracker-b7c01.firebaseapp.com",
+            projectId: "healthtracker-b7c01",
+            storageBucket: "healthtracker-b7c01.firebasestorage.app",
+            messagingSenderId: "907017911490",
+            appId: "1:907017911490:web:0692513b3ac12491368f5b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const loginForm = document.getElementById("loginForm");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const emailInput = document.getElementById("emailInput");
+        const passwordInput = document.getElementById("passwordInput");
+        const errorMsg = document.getElementById("errorMsg");
+        const recordsBody = document.getElementById("recordsBody");
+        const statusText = document.getElementById("statusText");
+
+        let unsubscribeRecords = null;
+
+        function setError(msg) {
+            if (!msg) {
+                errorMsg.textContent = "";
+                errorMsg.classList.add("hidden");
+            } else {
+                errorMsg.textContent = msg;
+                errorMsg.classList.remove("hidden");
+            }
+        }
+
+        function formatDateAndTime(docId, data) {
+            // Jeśli dokument ma pole Timestamp (np. createdAt), użyj go; w przeciwnym razie pokaż ID dokumentu / brak daty
+            const ts = data.createdAt?.toDate ? data.createdAt.toDate() : null;
+            if (ts) {
+                return {
+                    dateStr: ts.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                    timeStr: ts.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+                    sortKey: ts.getTime()
+                };
+            }
+            return {
+                dateStr: "Recorded",
+                timeStr: docId.slice(0, 8),
+                sortKey: Number(data.uptime_ms ?? 0)
+            };
+        }
+
+        function renderRows(docs) {
+            if (docs.length === 0) {
+                recordsBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="px-4 py-6 text-center text-sm text-slate-400">
+                            No records in weight_records yet.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            const rows = docs
+                .map(({ id, data }) => {
+                    const weightNum = typeof data.weight === "number" ? data.weight : Number(data.weight ?? 0);
+                    const unit = data.unit || "kg";
+                    const formattedWeight = unit === "kg"
+                        ? `${weightNum.toFixed(3)} ${unit}`
+                        : `${weightNum.toFixed(2)} ${unit}`;
+                    const meta = formatDateAndTime(id, data);
+                    return { ...meta, formattedWeight };
+                })
+                .sort((a, b) => b.sortKey - a.sortKey)
+                .slice(0, 20);
+
+            recordsBody.innerHTML = rows.map(row => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3.5 text-sm text-slate-700 font-medium">${row.dateStr}</td>
+                    <td class="px-4 py-3.5 text-sm text-slate-400">${row.timeStr}</td>
+                    <td class="px-4 py-3.5 text-sm font-bold text-slate-800">${row.formattedWeight}</td>
+                </tr>
+            `).join("");
+        }
+
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            setError("");
+            loginBtn.disabled = true;
+            loginBtn.textContent = "Signing in...";
+
+            try {
+                await signInWithEmailAndPassword(auth, emailInput.value.trim(), passwordInput.value);
+            } catch (err) {
+                setError(err.message || "Sign-in failed.");
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = "Sign in";
+            }
+        });
+
+        logoutBtn.addEventListener("click", async () => {
+            if (unsubscribeRecords) {
+                unsubscribeRecords();
+                unsubscribeRecords = null;
+            }
+            await signOut(auth);
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (unsubscribeRecords) {
+                unsubscribeRecords();
+                unsubscribeRecords = null;
+            }
+
+            if (!user) {
+                loginForm.classList.remove("hidden");
+                logoutBtn.classList.add("hidden");
+                statusText.textContent = "Sign in required • healthtracker-b7c01";
+                recordsBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="px-4 py-6 text-center text-sm text-slate-400">
+                            Sign in above to view weight_records.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            loginForm.classList.add("hidden");
+            logoutBtn.classList.remove("hidden");
+            setError("");
+            statusText.textContent = "Live • weight_records";
+
+            const q = query(collection(db, "weight_records"), limit(50));
+            unsubscribeRecords = onSnapshot(
+                q,
+                (snapshot) => {
+                    const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+                    renderRows(docs);
+                },
+                (err) => {
+                    statusText.textContent = "Read error";
+                    recordsBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="px-4 py-6 text-center text-sm text-rose-600">
+                                ${err.message}
+                            </td>
+                        </tr>`;
+                }
+            );
+        });
+    </script>
 </body>
 </html>
