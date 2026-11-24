@@ -1,0 +1,224 @@
+#include <Wire.h>
+#include <Adafruit_TCS34725.h>
+
+// --- Nowe piny tensometru (zwolnione GPIO 21/22 dla I2C) ---
+const int DOUT_PIN = 16;
+const int SCK_PIN  = 17;
+
+// --- Czujnik mętności (wyjście analogowe przez dzielnik napięcia -> max 3.3V) ---
+const int TURBIDITY_PIN = 36;
+
+// --- Czujnik koloru RGB TCS34725 (I2C 0x29) ---
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_154MS, TCS34725_GAIN_4X);
+bool g_tcsReady = false;
+
+// Struktura wyników analizy optycznej dializatu
+struct DialysateOptics {
+  bool valid;
+  uint16_t r;
+  uint16_t g;
+  uint16_t b;
+  uint16_t c;           // Kanał jasności (Clear)
+  float redGreenRatio;  // Wskaźnik hemoperitoneum (R / G)
+  float turbidityVolt;  // Napięcie po uśrednieniu (wyższe = czystszy płyn)
+  float clarityPct;     // Szacowana przejrzystość (0–100%)
+  String statusLabel;   // "CLEAR", "CLOUDY", "BLOOD_TRACE"
+};
+
+DialysateOptics measureDialysateOptics() {
+  DialysateOptics res = { false, 0, 0, 0, 0, 0.0f, 0.0f, 0.0f, "UNKNOWN" };
+
+  // 1. Odczyt mętności (15 próbek z odrzuceniem zakłóceń)
+  long adcSum = 0;
+  for (int i = 0; i < 15; i++) {
+    adcSum += analogRead(TURBIDITY_PIN);
+    delay(10);
+  }
+  float avgAdc = adcSum / 15.0f;
+  // Przeliczenie 12-bit ADC ESP32 (0-4095) na napięcie (0-3.3V)
+  res.turbidityVolt = (avgAdc / 4095.0f) * 3.3f;
+
+  // Skalowanie przejrzystości: skalibruj V_CLEAR (np. 2.85V dla czystego worka w szczelinie)
+  // oraz V_CLOUDY (np. 1.20V dla silnego zmętnienia) na swoim stanowisku
+  const float V_CLEAR  = 2.85f;
+  const float V_CLOUDY = 1.20f;
+  float pct = ((res.turbidityVolt - V_CLOUDY) / (V_CLEAR - V_CLOUDY)) * 100.0f;
+  res.clarityPct = constrain(pct, 0.0f, 100.0f);
+
+  // 2. Odczyt koloru RGB z TCS34725
+  if (g_tcsReady) {
+    tcs.setInterrupt(false); // Włącz białą diodę LED na płytce TCS34725
+    delay(200);              // Czas na pełną integrację przetwornika (154 ms + zapas)
+
+    uint32_t sumR = 0, sumG = 0, sumB = 0, sumC = 0;
+    const int samples = 4;
+    for (int i = 0; i < samples; i++) {
+      uint16_t r, g, b, c;
+      tcs.getRawData(&r, &g, &b, &c);
+      sumR += r;
+      sumG += g;
+      sumB += b;
+      sumC += c;
+      delay(160);
+    }
+
+    tcs.setInterrupt(true);  // Wyłącz diodę LED po pomiarze
+
+    res.r = sumR / samples;
+    res.g = sumG / samples;
+    res.b = sumB / samples;
+    res.c = sumC / samples;
+    res.redGreenRatio = (res.g > 0) ? ((float)res.r / (float)res.g) : 0.0f;
+    res.valid = true;
+  }
+
+  // 3. Klasyfikacja stanu płynu (progi do dostrojenia na własnym worku)
+  // Dla czystego słomkowego dializatu R/G wynosi zwykle ~1.05 - 1.25.
+  // Domieszka krwi podnosi R/G powyżej ~1.45.
+  if (res.valid && res.redGreenRatio > 1.45f) {
+    res.statusLabel = "BLOOD_TRACE";
+  } else if (res.clarityPct < 75.0f) {
+    res.statusLabel = "CLOUDY";
+  } else {
+    res.statusLabel = "CLEAR";
+  }
+
+  return res;
+}
+#3
+Wire.begin(21, 22);
+  pinMode(TURBIDITY_PIN, INPUT);
+  analogReadResolution(12);
+
+  if (tcs.begin()) {
+    g_tcsReady = true;
+    tcs.setInterrupt(true); // Domyślnie wyłącz diodę LED
+    Serial.println("[Optics] TCS34725 zainicjalizowany.");
+  } else {
+    Serial.println("[Optics] Nie wykryto TCS34725 na I2C!");
+  }
+4#
+bool sendRecordToFirestore(
+  const String& eventType,
+  float weightKg,
+  float ufKg,
+  unsigned long durationSec,
+  float flowRateGPerMin,
+  const DialysateOptics& optics
+) {
+  if (!ensureWiFiConnected() || !ensureValidIdToken()) return false;
+
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  String url = "https://firestore.googleapis.com/v1/projects/" + String(PROJECT_ID) +
+               "/databases/(default)/documents/" + String(COLLECTION);
+
+  HTTPClient http;
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", "Bearer " + g_idToken);
+
+  String isoTime = getIsoTimestampUTC();
+
+  String payload = "{\"fields\": {";
+  payload += "\"event_type\": {\"stringValue\": \"" + eventType + "\"},";
+  payload += "\"weight_kg\": {\"doubleValue\": " + String(weightKg, 3) + "},";
+  payload += "\"weight_g\": {\"integerValue\": \"" + String((int)round(weightKg * 1000.0f)) + "\"}";
+
+  if (eventType == "drain") {
+    payload += ",\"drain_duration_sec\": {\"integerValue\": \"" + String(durationSec) + "\"}";
+    payload += ",\"flow_rate_g_min\": {\"doubleValue\": " + String(flowRateGPerMin, 1) + "}";
+    if (g_hasPrevFresh) {
+      payload += ",\"prev_fresh_kg\": {\"doubleValue\": " + String(g_prevFreshWeightKg, 3) + "}";
+      payload += ",\"uf_kg\": {\"doubleValue\": " + String(ufKg, 3) + "}";
+      payload += ",\"uf_ml\": {\"integerValue\": \"" + String((int)round(ufKg * 1000.0f)) + "\"}";
+    }
+
+    // Dane optyczne (mętność + kolor RGB)
+    payload += ",\"turbidity_v\": {\"doubleValue\": " + String(optics.turbidityVolt, 3) + "}";
+    payload += ",\"clarity_pct\": {\"doubleValue\": " + String(optics.clarityPct, 1) + "}";
+    payload += ",\"fluid_status\": {\"stringValue\": \"" + optics.statusLabel + "\"}";
+
+    if (optics.valid) {
+      payload += ",\"color_r\": {\"integerValue\": \"" + String(optics.r) + "\"}";
+      payload += ",\"color_g\": {\"integerValue\": \"" + String(optics.g) + "\"}";
+      payload += ",\"color_b\": {\"integerValue\": \"" + String(optics.b) + "\"}";
+      payload += ",\"color_c\": {\"integerValue\": \"" + String(optics.c) + "\"}";
+      payload += ",\"red_green_ratio\": {\"doubleValue\": " + String(optics.redGreenRatio, 3) + "}";
+    }
+  }
+
+  if (isoTime.length() > 0) {
+    payload += ",\"recorded_at\": {\"timestampValue\": \"" + isoTime + "\"}";
+  }
+  payload += "}}";
+
+  int httpCode = http.POST(payload);
+  http.end();
+
+  if (httpCode == 401 || httpCode == 403) g_idToken = "";
+  return (httpCode >= 200 && httpCode < 300);
+}
+
+if (postStableMs >= 5000) {
+  g_drainDurationSec = elapsedSec;
+  float finalFlowRate = (g_drainDurationSec > 0) ? ((drainedMassKg * 1000.0f) / (g_drainDurationSec / 60.0f)) : 0.0f;
+
+  float ufKg = 0.0f;
+  if (g_hasPrevFresh) {
+    ufKg = drainedMassKg - g_prevFreshWeightKg;
+  }
+
+  // Pomiar optyczny (mętność + kolor RGB) na ustabilizowanym worku
+  M5.Lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(CYAN, BLACK);
+  M5.Lcd.setTextSize(2);
+  M5.Lcd.drawCentreString("Analiza optyczna plynu...", 160, 105, 1);
+
+  DialysateOptics optics = measureDialysateOptics();
+
+  // Wyświetlenie podsumowania UF oraz statusu klarowności/barwy
+  M5.Lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(YELLOW, BLACK);
+  M5.Lcd.setTextSize(3);
+  M5.Lcd.drawCentreString("Zapis drenazu...", 160, 55, 1);
+
+  if (g_hasPrevFresh) {
+    char ufBuf[32];
+    sprintf(ufBuf, "UF: %+.0f ml", ufKg * 1000.0f);
+    M5.Lcd.drawCentreString(ufBuf, 160, 95, 1);
+  }
+
+  M5.Lcd.setTextSize(2);
+  char optBuf[40];
+  sprintf(optBuf, "Klarownosc: %.0f%% | R/G: %.2f", optics.clarityPct, optics.redGreenRatio);
+  M5.Lcd.drawCentreString(optBuf, 160, 135, 1);
+
+  if (optics.statusLabel != "CLEAR") {
+    M5.Lcd.setTextColor(RED, BLACK);
+    M5.Lcd.drawCentreString("ALERT: SPRAWDZ PLYN!", 160, 165, 1);
+  }
+
+  bool ok = sendRecordToFirestore("drain", drainedMassKg, ufKg, g_drainDurationSec, finalFlowRate, optics);
+
+  // Alarm dźwiękowy jeśli wykryto zmętnienie lub podbarwienie krwią
+  if (optics.statusLabel != "CLEAR") {
+    playBeep(2200, 300, 4);
+  } else {
+    playBeep(1500, 200, ok ? 2 : 3);
+  }
+
+  if (prefs.getBool("has_next", false)) {
+    g_prevFreshWeightKg = prefs.getFloat("next_fresh", 0.0f);
+    g_hasPrevFresh = true;
+    prefs.putFloat("prev_fresh", g_prevFreshWeightKg);
+    prefs.putBool("has_prev", true);
+  }
+
+  g_flushStartWeightKg = weightKg;
+  resetStabilityTracker();
+  M5.Lcd.fillScreen(BLACK);
+  g_state = STATE_FLUSHING;
+  break;
+}
