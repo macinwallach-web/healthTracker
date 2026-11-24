@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PD Monitor — Dziennik Dializy Otrzewnowej</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+
+  <!-- Górny pasek nawigacji -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" id="conn-dot"></div>
+        <div>
+          <h1 class="text-lg font-semibold tracking-tight text-white">PD Monitor</h1>
+          <p class="text-xs text-slate-400">Automatyczny Dziennik Dializy Otrzewnowej (85 kg / CAPD)</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2" id="header-actions" style="display: none;">
+        <button id="seed-demo-btn"
+          class="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-950/70 hover:bg-amber-900/80 text-amber-300 border border-amber-700/60 transition">
+          + Symuluj 30 dni (UF ~1L/d)
+        </button>
+        <button id="clear-demo-btn"
+          class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+          Usuń symulację
+        </button>
+        <button id="export-csv-btn"
+          class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          Eksport CSV
+        </button>
+        <button id="logout-btn"
+          class="px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60 transition">
+          Wyloguj
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+
+    <!-- Ekran logowania -->
+    <section id="login-section" class="max-w-md mx-auto mt-12 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <h2 class="text-xl font-semibold text-white mb-1">Dostęp do dziennika pacjenta</h2>
+      <p class="text-sm text-slate-400 mb-6">Zaloguj się danymi konta Firebase połączonego z wagą M5Stack.</p>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Email</label>
+          <input type="email" id="email-input" required
+            class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-sky-500"
+            placeholder="pacjent@example.com" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Hasło</label>
+          <input type="password" id="password-input" required
+            class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-sky-500"
+            placeholder="••••••••" />
+        </div>
+        <p id="login-error" class="text-xs text-rose-400 hidden"></p>
+        <button type="submit"
+          class="w-full py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium transition">
+          Połącz z bazą pomiarów
+        </button>
+      </form>
+    </section>
+
+    <!-- Główny panel pacjenta -->
+    <section id="dashboard-section" class="space-y-6 hidden">
+
+      <!-- Pasek statusu generatora -->
+      <div id="sim-banner" class="hidden bg-amber-950/50 border border-amber-700/60 text-amber-200 px-4 py-3 rounded-xl text-xs flex items-center justify-between">
+        <span id="sim-banner-text">Trwa zapisywanie danych symulacyjnych do Firestore...</span>
+      </div>
+
+      <!-- Karty KPI (Bieżące / 7 dni / 30 dni) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p class="text-xs font-medium text-slate-400 uppercase">UF z ostatnich 24h</p>
+          <p id="kpi-uf-24h" class="text-2xl font-bold mt-1 text-emerald-400">-- ml</p>
+          <p id="kpi-uf-sub" class="text-xs text-slate-500 mt-1">Suma z ostatnich 24 godzin</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p class="text-xs font-medium text-slate-400 uppercase">Średnia UF (7 dni / 30 dni)</p>
+          <p id="kpi-uf-7d-30d" class="text-2xl font-bold mt-1 text-white">-- / --</p>
+          <p id="kpi-uf-7d-30d-sub" class="text-xs text-slate-500 mt-1">Średni bilans dobowy (ml/d)</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p class="text-xs font-medium text-slate-400 uppercase">Śr. przepływ cewnika (30d)</p>
+          <p id="kpi-flow" class="text-2xl font-bold mt-1 text-sky-400">-- g/min</p>
+          <p id="kpi-flow-sub" class="text-xs text-slate-500 mt-1">Wskaźnik drożności odpływu</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p class="text-xs font-medium text-slate-400 uppercase">Ostatni świeży worek</p>
+          <p id="kpi-fresh" class="text-2xl font-bold mt-1 text-amber-300">-- kg</p>
+          <p id="kpi-fresh-time" class="text-xs text-slate-500 mt-1">Brak pomiaru</p>
+        </div>
+      </div>
+
+      <!-- Wykres z przełącznikiem: Wymiany / Tygodniowo / Miesięcznie -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-sm font-semibold text-white" id="chart-title">Trendy Ultrafiltracji i Przepływu</h2>
+            <p class="text-xs text-slate-400" id="chart-subtitle">Widok poszczególnych drenaży</p>
+          </div>
+          <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+            <button data-chart-mode="exchanges" class="chart-mode-btn px-2.5 py-1 rounded bg-sky-600 text-white font-medium">Wymiany</button>
+            <button data-chart-mode="weekly" class="chart-mode-btn px-2.5 py-1 rounded text-slate-400 hover:text-white">Tygodniowo</button>
+            <button data-chart-mode="monthly" class="chart-mode-btn px-2.5 py-1 rounded text-slate-400 hover:text-white">Miesięcznie</button>
+          </div>
+        </div>
+        <div class="h-64">
+          <canvas id="pdChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Zestawienie Tygodniowe i Miesięczne (Tabela raportowa) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-semibold text-white">Statystyki Okresowe (Podsumowanie dla Lekarza)</h2>
+            <p class="text-xs text-slate-400">Agregacja bilansu ultrafiltracji oraz drożności cewnika</p>
+          </div>
+          <div class="flex gap-2 text-xs">
+            <button data-period="weekly" class="period-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium">Tygodniowe (ISO)</button>
+            <button data-period="monthly" class="period-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Miesięczne</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400 bg-slate-900/50">
+                <th class="py-3 px-4">Okres</th>
+                <th class="py-3 px-4">Dni / Wymiany</th>
+                <th class="py-3 px-4">Suma Net UF</th>
+                <th class="py-3 px-4">Śr. UF / dobę</th>
+                <th class="py-3 px-4">Śr. UF / wymianę</th>
+                <th class="py-3 px-4">Śr. Czas Drenażu</th>
+                <th class="py-3 px-4">Śr. Przepływ</th>
+              </tr>
+            </thead>
+            <tbody id="periodic-tbody" class="divide-y divide-slate-800/70 text-sm">
+              <tr>
+                <td colspan="7" class="py-6 text-center text-slate-500">Obliczanie statystyk...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Szczegółowy dziennik pojedynczych pomiarów -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-3">
+            <h2 class="text-sm font-semibold text-white">Historia Pojedynczych Pomiarów</h2>
+            <span class="text-xs text-slate-500" id="record-count">0 rekordów</span>
+          </div>
+          <div class="flex gap-2 text-xs">
+            <button data-filter="all" class="filter-btn px-2.5 py-1 rounded bg-sky-600 text-white">Wszystkie</button>
+            <button data-filter="drain" class="filter-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">Tylko drenaże</button>
+            <button data-filter="fresh" class="filter-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">Świeże worki</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400 bg-slate-900/50">
+                <th class="py-3 px-4">Data i godzina</th>
+                <th class="py-3 px-4">Etap</th>
+                <th class="py-3 px-4">Zmierzona masa</th>
+                <th class="py-3 px-4">Poprz. świeży</th>
+                <th class="py-3 px-4">Net UF</th>
+                <th class="py-3 px-4">Czas drenażu</th>
+                <th class="py-3 px-4">Przepływ</th>
+              </tr>
+            </thead>
+            <tbody id="records-tbody" class="divide-y divide-slate-800/70 text-sm">
+              <tr>
+                <td colspan="7" class="py-8 text-center text-slate-500">Oczekiwanie na dane...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Firebase Modular SDK (v10) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore, collection, query, limit, onSnapshot,
+      writeBatch, doc, Timestamp, getDocs, where
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCeXDgWy4p1qQO6UI22uu1p38STXOG2UzE",
+      authDomain: "healthtracker-b7c01.firebaseapp.com",
+      projectId: "healthtracker-b7c01",
+      storageBucket: "healthtracker-b7c01.firebasestorage.app",
+      messagingSenderId: "907017911490",
+      appId: "1:907017911490:web:0692513b3ac12491368f5b"
+    };
+    const COLLECTION_NAME = "weights";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let allRecords = [];
+    let weeklyStats = [];
+    let monthlyStats = [];
+
+    let currentFilter = "all";
+    let currentPeriodTab = "weekly";
+    let currentChartMode = "exchanges";
+    let unsubscribeSnapshot = null;
+    let pdChartInstance = null;
+
+    const loginSection = document.getElementById("login-section");
+    const dashboardSection = document.getElementById("dashboard-section");
+    const headerActions = document.getElementById("header-actions");
+    const loginForm = document.getElementById("login-form");
+    const loginError = document.getElementById("login-error");
+    const tbody = document.getElementById("records-tbody");
+    const periodicTbody = document.getElementById("periodic-tbody");
+    const simBanner = document.getElementById("sim-banner");
+    const simBannerText = document.getElementById("sim-banner-text");
+
+    // Logowanie
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      loginError.classList.add("hidden");
+      const email = document.getElementById("email-input").value.trim();
+      const password = document.getElementById("password-input").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        loginError.textContent = "Błąd logowania: " + err.message;
+        loginError.classList.remove("hidden");
+      }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", () => signOut(auth));
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginSection.classList.add("hidden");
+        dashboardSection.classList.remove("hidden");
+        headerActions.style.display = "flex";
+        startListeningToFirestore();
+      } else {
+        loginSection.classList.remove("hidden");
+        dashboardSection.classList.add("hidden");
+        headerActions.style.display = "none";
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+      }
+    });
+
+    // Odczyt z Firestore (limit 600 wpisów = >2 miesiące przy 8 wpisach/dobę)
+    function startListeningToFirestore() {
+      const q = query(collection(db, COLLECTION_NAME), limit(600));
+
+      unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+        allRecords = snapshot.docs.map(docSnap => {
+          const d = docSnap.data();
+          let ts = null;
+          if (d.recorded_at && d.recorded_at.toDate) {
+            ts = d.recorded_at.toDate();
+          } else if (docSnap._document && docSnap._document.createTime && docSnap._document.createTime.timestamp) {
+            ts = docSnap._document.createTime.timestamp.toDate();
+          }
+
+          return {
+            id: docSnap.id,
+            event_type: d.event_type || (d.unit ? "legacy" : "unknown"),
+            solution: d.solution || null,
+            is_simulated: Boolean(d.is_simulated),
+            weight_kg: Number(d.weight_kg ?? d.weight ?? 0),
+            weight_g: Number(d.weight_g ?? Math.round((d.weight_kg ?? d.weight ?? 0) * 1000)),
+            prev_fresh_kg: d.prev_fresh_kg !== undefined ? Number(d.prev_fresh_kg) : null,
+            uf_ml: d.uf_ml !== undefined ? Number(d.uf_ml) : null,
+            drain_duration_sec: d.drain_duration_sec !== undefined ? Number(d.drain_duration_sec) : null,
+            flow_rate_g_min: d.flow_rate_g_min !== undefined ? Number(d.flow_rate_g_min) : null,
+            recorded_at: ts
+          };
+        });
+
+        allRecords.sort((a, b) => {
+          const timeA = a.recorded_at ? a.recorded_at.getTime() : 0;
+          const timeB = b.recorded_at ? b.recorded_at.getTime() : 0;
+          return timeB - timeA;
+        });
+
+        document.getElementById("record-count").textContent = `${allRecords.length} rekordów`;
+
+        weeklyStats = computePeriodicStats(allRecords, "weekly");
+        monthlyStats = computePeriodicStats(allRecords, "monthly");
+
+        updateKPIs(allRecords);
+        renderPeriodicTable();
+        renderTable();
+        updateChart();
+      }, (error) => {
+        console.error("Firestore read error:", error);
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-400">Błąd odczytu z bazy: ${error.message}</td></tr>`;
+      });
+    }
+
+    // =========================================================================
+    // GENERATOR DANYCH STATYSTYCZNYCH (85 kg, CAPD 4x2000 ml, dobowa UF ~ 1000 ml)
+    // =========================================================================
+    function gaussianRandom(mean, stdDev) {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      const num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+      return mean + num * stdDev;
+    }
+
+    document.getElementById("seed-demo-btn").addEventListener("click", async () => {
+      if (!confirm("Wygenerować statystyczne pomiary z ostatnich 30 dni (4 wymiany manualne/dobę, pacjent 85 kg, UF ~1000 ml/d)?")) {
+        return;
+      }
+
+      simBanner.classList.remove("hidden");
+      simBannerText.textContent = "Generowanie i wysyłanie 240 pomiarów do Firestore (proszę czekać)...";
+
+      // Standardowy schemat 4 wymian manualnych CAPD (suma docelowa UF = 1000 ml/dobę):
+      // 07:30 po nocy (2.27%): ~360 ml
+      // 12:30 południe (1.36%): ~160 ml
+      // 17:30 popołudnie (2.27%): ~270 ml
+      // 22:30 wieczór (1.36%): ~210 ml
+      const schedule = [
+        { hour: 7,  min: 30, solution: "2.27%", meanUfMl: 360, stdUfMl: 45, meanFlow: 165 },
+        { hour: 12, min: 30, solution: "1.36%", meanUfMl: 160, stdUfMl: 35, meanFlow: 190 },
+        { hour: 17, min: 30, solution: "2.27%", meanUfMl: 270, stdUfMl: 40, meanFlow: 180 },
+        { hour: 22, min: 30, solution: "1.36%", meanUfMl: 210, stdUfMl: 35, meanFlow: 185 }
+      ];
+
+      const colRef = collection(db, COLLECTION_NAME);
+      const recordsToCreate = [];
+      const now = new Date();
+
+      // Masa świeżego worka 2000 ml brutto (płyn + opakowanie) ~ 2.130 kg
+      let prevFreshKg = Number(gaussianRandom(2.130, 0.008).toFixed(3));
+
+      for (let daysAgo = 30; daysAgo >= 1; daysAgo--) {
+        // Lekka zmienność dobowa nawodnienia pacjenta 85 kg (±80 ml/dobę)
+        const dailyHydrationShift = gaussianRandom(0, 20);
+
+        for (let sIdx = 0; sIdx < schedule.length; sIdx++) {
+          const slot = schedule[sIdx];
+          const eventDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
+          const jitterMin = Math.round(gaussianRandom(0, 12));
+          eventDate.setHours(slot.hour, slot.min + jitterMin, Math.floor(Math.random() * 59), 0);
+
+          // 1. Drenaż poprzedniego płynu (UF netto = drain - prevFresh)
+          const ufMl = Math.round(gaussianRandom(slot.meanUfMl + dailyHydrationShift, slot.stdUfMl));
+          const drainKg = Number((prevFreshKg + ufMl / 1000.0).toFixed(3));
+          const drainGrams = Math.round(drainKg * 1000);
+
+          const flowRate = Number(Math.max(115, gaussianRandom(slot.meanFlow, 18)).toFixed(1));
+          const durationSec = Math.round((drainGrams / flowRate) * 60);
+
+          recordsToCreate.push({
+            event_type: "drain",
+            solution: slot.solution,
+            weight_kg: drainKg,
+            weight_g: drainGrams,
+            prev_fresh_kg: prevFreshKg,
+            uf_kg: Number((ufMl / 1000.0).toFixed(3)),
+            uf_ml: ufMl,
+            drain_duration_sec: durationSec,
+            flow_rate_g_min: flowRate,
+            is_simulated: true,
+            recorded_at: Timestamp.fromDate(eventDate)
+          });
+
+          // 2. Ważenie nowego worka (ok. 3 minuty wcześniej w realnym cyklu, zapisane jako baza dla kolejnej wymiany)
+          const freshDate = new Date(eventDate.getTime() - 3 * 60 * 1000);
+          const nextFreshKg = Number(gaussianRandom(2.130, 0.008).toFixed(3));
+
+          recordsToCreate.push({
+            event_type: "fresh",
+            solution: slot.solution,
+            weight_kg: nextFreshKg,
+            weight_g: Math.round(nextFreshKg * 1000),
+            is_simulated: true,
+            recorded_at: Timestamp.fromDate(freshDate)
+          });
+
+          prevFreshKg = nextFreshKg;
+        }
+      }
+
+      try {
+        // Firestore limituje writeBatch do 500 operacji na paczkę -> dzielimy po 400
+        for (let i = 0; i < recordsToCreate.length; i += 400) {
+          const batch = writeBatch(db);
+          const chunk = recordsToCreate.slice(i, i + 400);
+          chunk.forEach(item => {
+            const newDocRef = doc(colRef);
+            batch.set(newDocRef, item);
+          });
+          await batch.commit();
+        }
+        simBannerText.textContent = `Gotowe! Dodano ${recordsToCreate.length} pomiarów z 30 dni (średnia dobowa UF ~ 1000 ml).`;
+        setTimeout(() => simBanner.classList.add("hidden"), 5000);
+      } catch (err) {
+        console.error(err);
+        simBannerText.textContent = "Błąd zapisu symulacji: " + err.message;
+      }
+    });
+
+    document.getElementById("clear-demo-btn").addEventListener("click", async () => {
+      if (!confirm("Usunąć wszystkie wygenerowane dane symulacyjne (prawdziwe pomiary z M5Stack pozostaną nietknięte)?")) {
+        return;
+      }
+      simBanner.classList.remove("hidden");
+      simBannerText.textContent = "Usuwanie rekordów symulacyjnych...";
+
+      try {
+        const q = query(collection(db, COLLECTION_NAME), where("is_simulated", "==", true));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          simBannerText.textContent = "Brak danych symulacyjnych do usunięcia.";
+          setTimeout(() => simBanner.classList.add("hidden"), 3000);
+          return;
+        }
+
+        const docs = snap.docs;
+        for (let i = 0; i < docs.length; i += 400) {
+          const batch = writeBatch(db);
+          docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+
+        simBannerText.textContent = `Usunięto ${docs.length} rekordów symulacyjnych.`;
+        setTimeout(() => simBanner.classList.add("hidden"), 4000);
+      } catch (err) {
+        console.error(err);
+        simBannerText.textContent = "Błąd usuwania symulacji: " + err.message;
+      }
+    });
+
+    // --- Funkcje kalendarzowe ISO Week i Miesiąc ---
+    function getISOWeekInfo(date) {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+      const year = d.getUTCFullYear();
+
+      const monday = new Date(date);
+      const diffToMon = (monday.getDay() + 6) % 7;
+      monday.setDate(monday.getDate() - diffToMon);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      const fmt = (dt) => dt.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
+      return {
+        key: `${year}-W${String(weekNo).padStart(2, "0")}`,
+        label: `Tydz. ${weekNo} (${fmt(monday)}–${fmt(sunday)})`,
+        shortLabel: `W${String(weekNo).padStart(2, "0")} (${fmt(monday)})`,
+        sortKey: year * 100 + weekNo
+      };
+    }
+
+    function getMonthInfo(date) {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const monthNames = ["Sty", "Lut", "Mar", "Kwi", "Maj", "Cze", "Lip", "Sie", "Wrz", "Paź", "Lis", "Gru"];
+      return {
+        key: `${year}-${String(month).padStart(2, "0")}`,
+        label: `${monthNames[month - 1]} ${year}`,
+        shortLabel: `${monthNames[month - 1]} ${String(year).slice(2)}`,
+        sortKey: year * 100 + month
+      };
+    }
+
+    // --- Agregacja statystyk tygodniowych i miesięcznych ---
+    function computePeriodicStats(records, mode) {
+      const drains = records.filter(r => r.event_type === "drain" && r.recorded_at);
+      const groups = new Map();
+
+      drains.forEach(r => {
+        const info = mode === "weekly" ? getISOWeekInfo(r.recorded_at) : getMonthInfo(r.recorded_at);
+        if (!groups.has(info.key)) {
+          groups.set(info.key, {
+            key: info.key,
+            label: info.label,
+            shortLabel: info.shortLabel,
+            sortKey: info.sortKey,
+            drainCount: 0,
+            ufCount: 0,
+            totalUfMl: 0,
+            flowSum: 0,
+            flowCount: 0,
+            durationSum: 0,
+            durationCount: 0,
+            activeDays: new Set()
+          });
+        }
+
+        const g = groups.get(info.key);
+        g.drainCount += 1;
+        g.activeDays.add(r.recorded_at.toISOString().slice(0, 10));
+
+        if (r.uf_ml !== null && !isNaN(r.uf_ml)) {
+          g.totalUfMl += r.uf_ml;
+          g.ufCount += 1;
+        }
+        if (r.flow_rate_g_min !== null && r.flow_rate_g_min > 0) {
+          g.flowSum += r.flow_rate_g_min;
+          g.flowCount += 1;
+        }
+        if (r.drain_duration_sec !== null && r.drain_duration_sec > 0) {
+          g.durationSum += r.drain_duration_sec;
+          g.durationCount += 1;
+        }
+      });
+
+      return Array.from(groups.values())
+        .sort((a, b) => b.sortKey - a.sortKey)
+        .map(g => {
+          const days = g.activeDays.size || 1;
+          return {
+            ...g,
+            daysCount: g.activeDays.size,
+            avgDailyUfMl: g.ufCount > 0 ? Math.round(g.totalUfMl / days) : null,
+            avgExchangeUfMl: g.ufCount > 0 ? Math.round(g.totalUfMl / g.ufCount) : null,
+            avgFlow: g.flowCount > 0 ? (g.flowSum / g.flowCount) : null,
+            avgDurationSec: g.durationCount > 0 ? Math.round(g.durationSum / g.durationCount) : null
+          };
+        });
+    }
+
+    // --- Formatowanie ---
+    function formatDateTime(dateObj) {
+      if (!dateObj) return "Brak czasu";
+      return dateObj.toLocaleString("pl-PL", {
+        day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function formatDuration(sec) {
+      if (sec === null || isNaN(sec)) return "—";
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}m ${s}s`;
+    }
+
+    function formatUF(ufMl) {
+      if (ufMl === null || isNaN(ufMl)) return `<span class="text-slate-500">—</span>`;
+      const sign = ufMl > 0 ? "+" : "";
+      const color = ufMl >= 0 ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold";
+      return `<span class="${color}">${sign}${ufMl} ml</span>`;
+    }
+
+    // --- Karty KPI ---
+    function updateKPIs(records) {
+      const nowMs = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+      const drains = records.filter(r => r.event_type === "drain" && r.recorded_at);
+      const freshBags = records.filter(r => r.event_type === "fresh");
+
+      // 1. 24h Net UF
+      const drains24h = drains.filter(r => (nowMs - r.recorded_at.getTime()) <= dayMs && r.uf_ml !== null);
+      const sumUf24h = drains24h.reduce((acc, r) => acc + r.uf_ml, 0);
+      const uf24El = document.getElementById("kpi-uf-24h");
+      if (drains24h.length > 0) {
+        uf24El.textContent = `${sumUf24h > 0 ? "+" : ""}${sumUf24h} ml`;
+        uf24El.className = `text-2xl font-bold mt-1 ${sumUf24h >= 0 ? "text-emerald-400" : "text-rose-400"}`;
+        document.getElementById("kpi-uf-sub").textContent = `Z ${drains24h.length} drenaży w ostatnich 24h`;
+      } else {
+        uf24El.textContent = "-- ml";
+        document.getElementById("kpi-uf-sub").textContent = "Brak drenaży w ostatnich 24h";
+      }
+
+      // 2. Średnia dobowa UF: 7 dni vs 30 dni
+      const calcAvgDaily = (daysBack) => {
+        const subset = drains.filter(r => (nowMs - r.recorded_at.getTime()) <= daysBack * dayMs && r.uf_ml !== null);
+        if (subset.length === 0) return null;
+        const uniqueDays = new Set(subset.map(r => r.recorded_at.toISOString().slice(0, 10))).size || 1;
+        const total = subset.reduce((a, r) => a + r.uf_ml, 0);
+        return Math.round(total / uniqueDays);
+      };
+      const avg7d = calcAvgDaily(7);
+      const avg30d = calcAvgDaily(30);
+      const fmtSign = (v) => v === null ? "--" : `${v > 0 ? "+" : ""}${v}`;
+      document.getElementById("kpi-uf-7d-30d").textContent = `${fmtSign(avg7d)} / ${fmtSign(avg30d)} ml`;
+
+      // 3. Średni przepływ cewnika (30 dni)
+      const recentFlows = drains.filter(r => (nowMs - r.recorded_at.getTime()) <= 30 * dayMs && r.flow_rate_g_min > 0);
+      if (recentFlows.length > 0) {
+        const avgFlow = recentFlows.reduce((a, r) => a + r.flow_rate_g_min, 0) / recentFlows.length;
+        const flowEl = document.getElementById("kpi-flow");
+        flowEl.textContent = `${avgFlow.toFixed(0)} g/min`;
+        flowEl.className = `text-2xl font-bold mt-1 ${avgFlow >= 100 ? "text-sky-400" : "text-amber-400"}`;
+        document.getElementById("kpi-flow-sub").textContent = `Średnia z ${recentFlows.length} drenaży (30 dni)`;
+      }
+
+      // 4. Ostatni świeży worek
+      if (freshBags.length > 0) {
+        document.getElementById("kpi-fresh").textContent = `${freshBags[0].weight_kg.toFixed(3)} kg`;
+        document.getElementById("kpi-fresh-time").textContent = formatDateTime(freshBags[0].recorded_at);
+      }
+    }
+
+    // --- Renderowanie tabeli okresowej (Tygodniowej / Miesięcznej) ---
+    function renderPeriodicTable() {
+      const rows = currentPeriodTab === "weekly" ? weeklyStats : monthlyStats;
+      if (rows.length === 0) {
+        periodicTbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">Brak zakończonych drenaży do agregacji.</td></tr>`;
+        return;
+      }
+
+      periodicTbody.innerHTML = rows.map(s => {
+        const flowBadge = s.avgFlow !== null
+          ? `<span class="${s.avgFlow >= 100 ? "text-sky-400" : "text-amber-400 font-semibold"}">${s.avgFlow.toFixed(0)} g/min</span>`
+          : "—";
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3 px-4 font-medium text-white whitespace-nowrap">${s.label}</td>
+            <td class="py-3 px-4 text-slate-300 whitespace-nowrap">${s.daysCount} dni / <span class="text-slate-400">${s.drainCount} wym.</span></td>
+            <td class="py-3 px-4 font-mono whitespace-nowrap">${s.ufCount > 0 ? formatUF(s.totalUfMl) : "—"}</td>
+            <td class="py-3 px-4 font-mono whitespace-nowrap">${formatUF(s.avgDailyUfMl)}</td>
+            <td class="py-3 px-4 font-mono whitespace-nowrap">${formatUF(s.avgExchangeUfMl)}</td>
+            <td class="py-3 px-4 text-slate-300 whitespace-nowrap">${formatDuration(s.avgDurationSec)}</td>
+            <td class="py-3 px-4 font-mono whitespace-nowrap">${flowBadge}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // Przełącznik zakładek Tygodniowe / Miesięczne
+    document.querySelectorAll(".period-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".period-btn").forEach(b => {
+          b.className = "period-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700";
+        });
+        btn.className = "period-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium";
+        currentPeriodTab = btn.dataset.period;
+        renderPeriodicTable();
+      });
+    });
+
+    // --- Renderowanie szczegółowej tabeli pomiarów ---
+    function renderTable() {
+      const filtered = allRecords.filter(r => currentFilter === "all" || r.event_type === currentFilter);
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Brak rekordów dla wybranego filtra.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.slice(0, 150).map(r => {
+        const solTag = r.solution ? ` <span class="text-[10px] text-slate-400">(${r.solution})</span>` : "";
+        const simTag = r.is_simulated ? ` <span class="text-[10px] text-amber-500/80">[SYM]</span>` : "";
+
+        let badge = `<span class="px-2 py-0.5 text-xs rounded-full bg-slate-800 text-slate-300">Pomiar</span>`;
+        if (r.event_type === "drain") {
+          badge = `<span class="px-2 py-0.5 text-xs font-medium rounded-full bg-rose-950 text-rose-300 border border-rose-800/50">Drenaż</span>${solTag}${simTag}`;
+        } else if (r.event_type === "fresh") {
+          badge = `<span class="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/50">Świeży worek</span>${solTag}${simTag}`;
+        }
+
+        const prevFreshStr = r.prev_fresh_kg !== null ? `${r.prev_fresh_kg.toFixed(3)} kg` : "—";
+        const flowStr = r.flow_rate_g_min !== null ? `${r.flow_rate_g_min.toFixed(0)} g/min` : "—";
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3 px-4 text-slate-300 whitespace-nowrap">${formatDateTime(r.recorded_at)}</td>
+            <td class="py-3 px-4 whitespace-nowrap">${badge}</td>
+            <td class="py-3 px-4 font-mono text-white whitespace-nowrap">${r.weight_kg.toFixed(3)} kg <span class="text-xs text-slate-500">(${r.weight_g} g)</span></td>
+            <td class="py-3 px-4 font-mono text-slate-400 whitespace-nowrap">${prevFreshStr}</td>
+            <td class="py-3 px-4 font-mono whitespace-nowrap">${formatUF(r.uf_ml)}</td>
+            <td class="py-3 px-4 text-slate-300 whitespace-nowrap">${formatDuration(r.drain_duration_sec)}</td>
+            <td class="py-3 px-4 text-sky-400 font-mono whitespace-nowrap">${flowStr}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => {
+          b.className = "filter-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700";
+        });
+        btn.className = "filter-btn px-2.5 py-1 rounded bg-sky-600 text-white";
+        currentFilter = btn.dataset.filter;
+        renderTable();
+      });
+    });
+
+    // --- Wykres z obsługą 3 trybów (Wymiany / Tygodniowo / Miesięcznie) ---
+    document.querySelectorAll(".chart-mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".chart-mode-btn").forEach(b => {
+          b.className = "chart-mode-btn px-2.5 py-1 rounded text-slate-400 hover:text-white";
+        });
+        btn.className = "chart-mode-btn px-2.5 py-1 rounded bg-sky-600 text-white font-medium";
+        currentChartMode = btn.dataset.chartMode;
+        updateChart();
+      });
+    });
+
+    function updateChart() {
+      let labels = [];
+      let ufData = [];
+      let flowData = [];
+      let ufBarLabel = "Net UF (ml)";
+
+      if (currentChartMode === "exchanges") {
+        document.getElementById("chart-title").textContent = "Trendy Ultrafiltracji i Przepływu (Pojedyncze wymiany)";
+        document.getElementById("chart-subtitle").textContent = "Ostatnie 20 zarejestrowanych drenaży";
+        const drainsChron = allRecords.filter(r => r.event_type === "drain" && r.recorded_at).slice(0, 20).reverse();
+        labels = drainsChron.map(r => formatDateTime(r.recorded_at));
+        ufData = drainsChron.map(r => r.uf_ml ?? 0);
+        flowData = drainsChron.map(r => r.flow_rate_g_min ?? 0);
+      } else if (currentChartMode === "weekly") {
+        document.getElementById("chart-title").textContent = "Podsumowanie Tygodniowe (Suma UF i Śr. Przepływ)";
+        document.getElementById("chart-subtitle").textContent = "Ostatnie 12 tygodni kalendarzowych";
+        ufBarLabel = "Tygodniowa suma UF (ml)";
+        const weeksChron = weeklyStats.slice(0, 12).reverse();
+        labels = weeksChron.map(w => w.shortLabel);
+        ufData = weeksChron.map(w => w.totalUfMl);
+        flowData = weeksChron.map(w => w.avgFlow ? Math.round(w.avgFlow) : 0);
+      } else if (currentChartMode === "monthly") {
+        document.getElementById("chart-title").textContent = "Podsumowanie Miesięczne (Suma UF i Śr. Przepływ)";
+        document.getElementById("chart-subtitle").textContent = "Ostatnie 12 miesięcy";
+        ufBarLabel = "Miesięczna suma UF (ml)";
+        const monthsChron = monthlyStats.slice(0, 12).reverse();
+        labels = monthsChron.map(m => m.label);
+        ufData = monthsChron.map(m => m.totalUfMl);
+        flowData = monthsChron.map(m => m.avgFlow ? Math.round(m.avgFlow) : 0);
+      }
+
+      const ctx = document.getElementById("pdChart").getContext("2d");
+      if (pdChartInstance) pdChartInstance.destroy();
+
+      pdChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: ufBarLabel,
+              data: ufData,
+              backgroundColor: ufData.map(v => v >= 0 ? "rgba(52, 211, 153, 0.75)" : "rgba(251, 113, 133, 0.75)"),
+              borderRadius: 4,
+              yAxisID: "y"
+            },
+            {
+              label: "Przepływ cewnika (g/min)",
+              data: flowData,
+              type: "line",
+              borderColor: "#38bdf8",
+              backgroundColor: "#38bdf8",
+              tension: 0.3,
+              yAxisID: "y1"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { labels: { color: "#cbd5e1", font: { size: 12 } } }
+          },
+          scales: {
+            x: { ticks: { color: "#94a3b8", maxRotation: 30 }, grid: { color: "rgba(51,65,85,0.3)" } },
+            y: {
+              type: "linear",
+              position: "left",
+              title: { display: true, text: ufBarLabel, color: "#34d399" },
+              ticks: { color: "#94a3b8" },
+              grid: { color: "rgba(51,65,85,0.3)" }
+            },
+            y1: {
+              type: "linear",
+              position: "right",
+              title: { display: true, text: "Przepływ (g/min)", color: "#38bdf8" },
+              ticks: { color: "#94a3b8" },
+              grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+    }
+
+    // Eksport CSV
+    document.getElementById("export-csv-btn").addEventListener("click", () => {
+      const headers = ["Timestamp_UTC", "Event_Type", "Solution", "Weight_kg", "Prev_Fresh_kg", "Net_UF_ml", "Drain_Duration_sec", "Flow_Rate_g_min", "Simulated"];
+      const rows = allRecords.map(r => [
+        r.recorded_at ? r.recorded_at.toISOString() : "",
+        r.event_type,
+        r.solution || "",
+        r.weight_kg.toFixed(3),
+        r.prev_fresh_kg !== null ? r.prev_fresh_kg.toFixed(3) : "",
+        r.uf_ml !== null ? r.uf_ml : "",
+        r.drain_duration_sec !== null ? r.drain_duration_sec : "",
+        r.flow_rate_g_min !== null ? r.flow_rate_g_min.toFixed(1) : "",
+        r.is_simulated ? "yes" : "no"
+      ]);
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `dziennik_dializy_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+    });
+  </script>
+</body>
+</html>
