@@ -6,7 +6,7 @@
   <title>Raport Dializy Otrzewnowej (CAPD)</title>
   <style>
     :root {
-      --bg: #f4f6f9;
+      --bg: #0f172a;
       --card: #ffffff;
       --text: #1a202c;
       --muted: #4a5568;
@@ -16,7 +16,7 @@
       --zebra: #f8fafc;
       --pos: #15803d;
       --neg: #b91c1c;
-      --accent: #2563eb;
+      --accent: #0284c7;
     }
 
     * { box-sizing: border-box; }
@@ -25,13 +25,90 @@
       margin: 0;
       padding: 16px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      background: var(--bg);
+      background: #f1f5f9;
       color: var(--text);
       font-size: 13px;
       line-height: 1.35;
     }
 
-    .container {
+    /* Ekran logowania (w stylu index.htm) */
+    .login-card {
+      max-width: 400px;
+      margin: 60px auto;
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    }
+
+    .login-card h2 {
+      margin: 0 0 4px 0;
+      font-size: 19px;
+      color: #ffffff;
+    }
+
+    .login-card p {
+      margin: 0 0 18px 0;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 5px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: #f8fafc;
+      font-size: 14px;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #38bdf8;
+    }
+
+    .login-error {
+      color: #fb7185;
+      font-size: 12px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+
+    /* Kontener raportu */
+    .report-container {
+      display: none;
       max-width: 1280px;
       margin: 0 auto;
       background: var(--card);
@@ -43,23 +120,25 @@
 
     .toolbar {
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
       gap: 10px;
       padding-bottom: 12px;
       margin-bottom: 14px;
       border-bottom: 1px solid var(--border);
     }
 
-    .toolbar-group {
+    .toolbar-status {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .toolbar-actions {
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
       gap: 8px;
     }
 
-    button {
+    .btn-tool {
       cursor: pointer;
       border: 1px solid var(--border);
       background: #ffffff;
@@ -70,53 +149,15 @@
       font-weight: 600;
     }
 
-    button:hover { background: #f1f5f9; }
-    button.active {
-      background: var(--accent);
-      color: #ffffff;
-      border-color: var(--accent);
-    }
+    .btn-tool:hover { background: #f1f5f9; }
 
-    button.print-btn {
+    .btn-print {
       background: #0f172a;
       color: #ffffff;
       border-color: #0f172a;
     }
-    button.print-btn:hover { background: #334155; }
 
-    .badge {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-    .badge-sim { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
-    .badge-live { background: #dcfce7; color: #166534; border: 1px solid #22c55e; }
-
-    .auth-panel {
-      display: none;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      padding: 10px 12px;
-      border-radius: 5px;
-      margin-bottom: 14px;
-    }
-    .auth-panel.visible { display: flex; }
-
-    .auth-panel input {
-      padding: 6px 9px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 13px;
-      min-width: 190px;
-    }
-
-    .status-msg { font-size: 12px; color: var(--muted); }
+    .btn-print:hover { background: #334155; }
 
     .report-header {
       display: flex;
@@ -126,6 +167,7 @@
       padding-bottom: 8px;
       border-bottom: 2px solid #0f172a;
     }
+
     .report-header h1 { margin: 0 0 3px 0; font-size: 18px; color: #0f172a; }
     .report-meta { font-size: 12px; color: var(--muted); }
     .report-patient { text-align: right; font-size: 12px; }
@@ -181,6 +223,7 @@
     .cell-summary { font-size: 11.5px; line-height: 1.35; }
     .sum-line { display: flex; justify-content: space-between; gap: 4px; }
 
+    /* Optymalizacja wydruku A4 Landscape */
     @page { size: A4 landscape; margin: 8mm; }
 
     @media print {
@@ -192,8 +235,16 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
-      .container { max-width: 100%; width: 100%; border: none; box-shadow: none; padding: 0; margin: 0; }
-      .toolbar, .auth-panel, .no-print { display: none !important; }
+      .login-card, .toolbar, .no-print { display: none !important; }
+      .report-container {
+        display: block !important;
+        max-width: 100%;
+        width: 100%;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+      }
       .report-header { margin-bottom: 8px; padding-bottom: 5px; }
       .report-header h1 { font-size: 14pt; }
       .table-wrap { overflow: visible; }
@@ -212,34 +263,44 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="toolbar no-print">
-      <div class="toolbar-group">
-        <button id="btnSim" class="active" type="button">Symulacja</button>
-        <button id="btnLive" type="button">Dane z Firestore (weights)</button>
-        <span id="modeBadge" class="badge badge-sim">Tryb symulacji</span>
-      </div>
-      <div class="toolbar-group">
-        <button class="print-btn" type="button" onclick="window.print()">Drukuj raport (A4)</button>
-      </div>
-    </div>
 
-    <div id="authPanel" class="auth-panel no-print">
-      <input type="email" id="authEmail" placeholder="E-mail użytkownika" />
-      <input type="password" id="authPassword" placeholder="Hasło" />
-      <button id="btnLogin" type="button">Zaloguj i pobierz dane</button>
-      <button id="btnLogout" type="button" style="display:none;">Wyloguj</button>
-      <span id="liveStatus" class="status-msg"></span>
+  <!-- Ekran logowania (identyczny przepływ jak w index.htm) -->
+  <section id="login-section" class="login-card">
+    <h2>Raport Dializy (CAPD)</h2>
+    <p>Zaloguj się kontem Firebase, aby wyświetlić raport dobowy.</p>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email-input">Email</label>
+        <input type="email" id="email-input" required placeholder="patient@example.com" />
+      </div>
+      <div class="form-group">
+        <label for="password-input">Hasło</label>
+        <input type="password" id="password-input" required placeholder="••••••••" />
+      </div>
+      <div id="login-error" class="login-error"></div>
+      <button type="submit" class="btn-primary">Połącz z Firestore</button>
+    </form>
+  </section>
+
+  <!-- Widok raportu (po zalogowaniu) -->
+  <section id="report-section" class="report-container">
+    <div class="toolbar no-print">
+      <div class="toolbar-status" id="status-text">Ładowanie danych...</div>
+      <div class="toolbar-actions">
+        <button type="button" class="btn-tool btn-print" onclick="window.print()">Drukuj raport (A4)</button>
+        <button type="button" id="logout-btn" class="btn-tool">Wyloguj</button>
+      </div>
     </div>
 
     <div class="report-header">
       <div>
         <h1>Dobowy Raport Dializy Otrzewnowej (CAPD)</h1>
-        <div class="report-meta" id="reportSubtitle">Źródło danych: Symulacja (dane przykładowe)</div>
+        <div class="report-meta" id="report-date-range">Kolekcja: weights</div>
       </div>
       <div class="report-patient">
-        <div><strong>Masa ciała (ref.):</strong> 85.0 kg</div>
-        <div><strong>Standardowy płyn:</strong> 1,5% Glukoza (1,22 Ca)</div>
+        <div><strong>Waga pacjenta:</strong> 85.0 kg</div>
+        <div><strong>Płyn dializacyjny:</strong> 1,5% Glukoza (1,22 Ca)</div>
       </div>
     </div>
 
@@ -267,15 +328,19 @@
             <th>Suma parametrów wymiany<small>Wlew / Drenaż / UF / Śr. przepływ</small></th>
           </tr>
         </thead>
-        <tbody id="reportBody"></tbody>
+        <tbody id="report-tbody">
+          <tr>
+            <td colspan="8" style="text-align:center; padding:16px;">Oczekiwanie na dane z Firestore...</td>
+          </tr>
+        </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCeXDgWy4p1qQO6UI22uu1p38STXOG2UzE",
@@ -290,60 +355,45 @@
     const DEFAULT_PATIENT_WEIGHT = "85.0 kg";
     const DEFAULT_FLUID_LABEL = "1,5% Glukoza 1,22 Ca";
 
-    const SIMULATION_DAYS = [
-      {
-        date: "2026-11-27",
-        patientWeight: DEFAULT_PATIENT_WEIGHT,
-        exchanges: [
-          { time: "07:15", inMl: 2000, outMl: 2260, ufMl: 260, flow: 188 },
-          { time: "12:10", inMl: 2000, outMl: 2210, ufMl: 210, flow: 182 },
-          { time: "17:05", inMl: 2000, outMl: 2290, ufMl: 290, flow: 191 },
-          { time: "22:00", inMl: 2000, outMl: 2240, ufMl: 240, flow: 179 }
-        ]
-      },
-      {
-        date: "2026-11-26",
-        patientWeight: DEFAULT_PATIENT_WEIGHT,
-        exchanges: [
-          { time: "07:20", inMl: 2000, outMl: 2230, ufMl: 230, flow: 180 },
-          { time: "12:15", inMl: 2000, outMl: 2180, ufMl: 180, flow: 174 },
-          { time: "17:10", inMl: 2000, outMl: 2250, ufMl: 250, flow: 185 },
-          { time: "22:05", inMl: 2000, outMl: 2220, ufMl: 220, flow: 176 }
-        ]
-      },
-      {
-        date: "2026-11-25",
-        patientWeight: DEFAULT_PATIENT_WEIGHT,
-        exchanges: [
-          { time: "07:10", inMl: 2000, outMl: 2310, ufMl: 310, flow: 195 },
-          { time: "12:00", inMl: 2000, outMl: 2240, ufMl: 240, flow: 186 },
-          { time: "17:20", inMl: 2000, outMl: 2270, ufMl: 270, flow: 189 },
-          { time: "22:15", inMl: 2000, outMl: 2250, ufMl: 250, flow: 181 }
-        ]
-      },
-      {
-        date: "2026-11-24",
-        patientWeight: DEFAULT_PATIENT_WEIGHT,
-        exchanges: [
-          { time: "07:30", inMl: 2000, outMl: 2190, ufMl: 190, flow: 172 },
-          { time: "12:25", inMl: 2000, outMl: 2160, ufMl: 160, flow: 168 },
-          { time: "17:15", inMl: 2000, outMl: 2210, ufMl: 210, flow: 175 },
-          { time: "22:10", inMl: 2000, outMl: 2200, ufMl: 200, flow: 171 }
-        ]
-      },
-      {
-        date: "2026-11-23",
-        patientWeight: DEFAULT_PATIENT_WEIGHT,
-        exchanges: [
-          { time: "07:05", inMl: 2000, outMl: 2280, ufMl: 280, flow: 190 },
-          { time: "12:05", inMl: 2000, outMl: 2230, ufMl: 230, flow: 184 },
-          { time: "17:00", inMl: 2000, outMl: 2260, ufMl: 260, flow: 187 },
-          { time: "21:55", inMl: 2000, outMl: 2140, ufMl: 140, flow: 165, isLavage: true }
-        ]
-      }
-    ];
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    let isSimulationMode = true;
+    const loginSection = document.getElementById("login-section");
+    const reportSection = document.getElementById("report-section");
+    const loginForm = document.getElementById("login-form");
+    const loginError = document.getElementById("login-error");
+    const tbody = document.getElementById("report-tbody");
+    const statusText = document.getElementById("status-text");
+
+    let unsubscribeSnapshot = null;
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      loginError.style.display = "none";
+      const email = document.getElementById("email-input").value.trim();
+      const password = document.getElementById("password-input").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        loginError.textContent = "Błąd logowania: " + err.message;
+        loginError.style.display = "block";
+      }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", () => signOut(auth));
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginSection.style.display = "none";
+        reportSection.style.display = "block";
+        startListeningToFirestore();
+      } else {
+        loginSection.style.display = "block";
+        reportSection.style.display = "none";
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+      }
+    });
 
     function formatSignedMl(val) {
       const n = Math.round(val);
@@ -363,88 +413,23 @@
       `;
     }
 
-    function renderTable(days) {
-      const tbody = document.getElementById("reportBody");
-      if (!days || days.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:16px;">Brak rekordów do wyświetlenia.</td></tr>`;
-        return;
-      }
+    function startListeningToFirestore() {
+      const q = query(
+        collection(db, COLLECTION_NAME),
+        orderBy("recorded_at", "desc"),
+        limit(300)
+      );
 
-      tbody.innerHTML = days.map(day => {
-        const list = day.exchanges || [];
-        let totalIn = 0, totalOut = 0, totalUf = 0, flowSum = 0, flowCount = 0;
-
-        list.forEach(ex => {
-          totalIn += ex.inMl || 0;
-          totalOut += ex.outMl || 0;
-          totalUf += ex.ufMl || 0;
-          if (ex.flow > 0) { flowSum += ex.flow; flowCount++; }
-        });
-
-        const avgFlow = flowCount > 0 ? Math.round(flowSum / flowCount) : 0;
-        const ufClass = totalUf >= 0 ? "uf-pos" : "uf-neg";
-        const fluidsText = list.length > 0 ? `${list.length} × ${DEFAULT_FLUID_LABEL}` : "—";
-
-        return `
-          <tr>
-            <td class="cell-date">${day.date}</td>
-            <td class="cell-weight">${day.patientWeight || DEFAULT_PATIENT_WEIGHT}</td>
-            ${renderExchangeCell(list[0])}
-            ${renderExchangeCell(list[1])}
-            ${renderExchangeCell(list[2])}
-            ${renderExchangeCell(list[3])}
-            <td class="cell-fluid">${fluidsText}</td>
-            <td class="cell-summary">
-              <div class="sum-line"><span>Wlew:</span><strong>${totalIn} ml</strong></div>
-              <div class="sum-line"><span>Drenaż:</span><strong>${totalOut} ml</strong></div>
-              <div class="sum-line"><span>UF dobowe:</span><strong class="${ufClass}">${formatSignedMl(totalUf)}</strong></div>
-              <div class="sum-line"><span>Śr. przepływ:</span><span>${avgFlow} g/min</span></div>
-            </td>
-          </tr>
-        `;
-      }).join("");
-    }
-
-    function activateSimulation() {
-      isSimulationMode = true;
-      document.getElementById("btnSim").classList.add("active");
-      document.getElementById("btnLive").classList.remove("active");
-      document.getElementById("authPanel").classList.remove("visible");
-
-      const badge = document.getElementById("modeBadge");
-      badge.className = "badge badge-sim";
-      badge.textContent = "Tryb symulacji";
-
-      document.getElementById("reportSubtitle").textContent = "Źródło danych: Symulacja (dane przykładowe)";
-      renderTable(SIMULATION_DAYS);
-    }
-
-    // Start w trybie symulacji (dane przykładowe)
-    activateSimulation();
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    async function loadFromWeightsCollection() {
-      const status = document.getElementById("liveStatus");
-      try {
-        status.textContent = "Pobieranie rekordów z kolekcji 'weights'...";
-        const q = query(
-          collection(db, COLLECTION_NAME),
-          orderBy("recorded_at", "desc"),
-          limit(300)
-        );
-        const snap = await getDocs(q);
-
-        // Odwracamy kolejność na chronologiczną (od rana do wieczora w obrębie dnia)
-        const docsChronological = snap.docs.map(doc => doc.data()).reverse();
+      unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+        const docsChronological = snapshot.docs.map(doc => doc.data()).reverse();
         const dayMap = new Map();
 
         docsChronological.forEach(d => {
           if (d.event_type !== "drain" && d.event_type !== "lavage_summary") return;
 
-          const ts = d.recorded_at && d.recorded_at.toDate ? d.recorded_at.toDate() : new Date();
+          const ts = d.recorded_at && d.recorded_at.toDate ? d.recorded_at.toDate() : null;
+          if (!ts) return;
+
           const dateKey = ts.toLocaleDateString("sv-SE");
           const timeStr = ts.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
@@ -479,4 +464,52 @@
           });
         });
 
-        const sortedDays = Array.from(dayMap.values()).
+        const sortedDays = Array.from(dayMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+        statusText.textContent = `Pobrano ${snapshot.size} rekordów (${sortedDays.length} dni w raporcie)`;
+
+        if (sortedDays.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:16px;">Brak zakończonych drenaży w kolekcji "${COLLECTION_NAME}".</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = sortedDays.map(day => {
+          const list = day.exchanges;
+          let totalIn = 0, totalOut = 0, totalUf = 0, flowSum = 0, flowCount = 0;
+
+          list.forEach(ex => {
+            totalIn += ex.inMl;
+            totalOut += ex.outMl;
+            totalUf += ex.ufMl;
+            if (ex.flow > 0) { flowSum += ex.flow; flowCount++; }
+          });
+
+          const avgFlow = flowCount > 0 ? Math.round(flowSum / flowCount) : 0;
+          const ufClass = totalUf >= 0 ? "uf-pos" : "uf-neg";
+          const fluidsText = `${list.length} × ${DEFAULT_FLUID_LABEL}`;
+
+          return `
+            <tr>
+              <td class="cell-date">${day.date}</td>
+              <td class="cell-weight">${day.patientWeight}</td>
+              ${renderExchangeCell(list[0])}
+              ${renderExchangeCell(list[1])}
+              ${renderExchangeCell(list[2])}
+              ${renderExchangeCell(list[3])}
+              <td class="cell-fluid">${fluidsText}</td>
+              <td class="cell-summary">
+                <div class="sum-line"><span>Wlew:</span><strong>${totalIn} ml</strong></div>
+                <div class="sum-line"><span>Drenaż:</span><strong>${totalOut} ml</strong></div>
+                <div class="sum-line"><span>UF dobowe:</span><strong class="${ufClass}">${formatSignedMl(totalUf)}</strong></div>
+                <div class="sum-line"><span>Śr. przepływ:</span><span>${avgFlow} g/min</span></div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }, (error) => {
+        statusText.textContent = "Błąd Firestore: " + error.message;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:16px; color:#b91c1c;">Błąd odczytu: ${error.message}</td></tr>`;
+      });
+    }
+  </script>
+</body>
+</html>
