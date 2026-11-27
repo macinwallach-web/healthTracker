@@ -113,7 +113,7 @@
       border: 1px solid var(--border);
       border-radius: 4px;
       font-size: 13px;
-      min-width: 180px;
+      min-width: 190px;
     }
 
     .status-msg { font-size: 12px; color: var(--muted); }
@@ -215,8 +215,8 @@
   <div class="container">
     <div class="toolbar no-print">
       <div class="toolbar-group">
-        <button id="btnSim" class="active" type="button" onclick="activateSimulation()">Symulacja</button>
-        <button id="btnLive" type="button" onclick="toggleLivePanel()">Dane z Firestore</button>
+        <button id="btnSim" class="active" type="button">Symulacja</button>
+        <button id="btnLive" type="button">Dane z Firestore (weights)</button>
         <span id="modeBadge" class="badge badge-sim">Tryb symulacji</span>
       </div>
       <div class="toolbar-group">
@@ -227,8 +227,8 @@
     <div id="authPanel" class="auth-panel no-print">
       <input type="email" id="authEmail" placeholder="E-mail użytkownika" />
       <input type="password" id="authPassword" placeholder="Hasło" />
-      <input type="text" id="collectionName" value="dialysis_logs" placeholder="Kolekcja Firestore" />
-      <button type="button" onclick="loginAndLoadFirestore()">Zaloguj i pobierz dane</button>
+      <button id="btnLogin" type="button">Zaloguj i pobierz dane</button>
+      <button id="btnLogout" type="button" style="display:none;">Wyloguj</button>
       <span id="liveStatus" class="status-msg"></span>
     </div>
 
@@ -272,7 +272,11 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCeXDgWy4p1qQO6UI22uu1p38STXOG2UzE",
       authDomain: "healthtracker-b7c01.firebaseapp.com",
@@ -282,6 +286,7 @@
       appId: "1:907017911490:web:0692513b3ac12491368f5b"
     };
 
+    const COLLECTION_NAME = "weights";
     const DEFAULT_PATIENT_WEIGHT = "85.0 kg";
     const DEFAULT_FLUID_LABEL = "1,5% Glukoza 1,22 Ca";
 
@@ -335,28 +340,10 @@
           { time: "17:00", inMl: 2000, outMl: 2260, ufMl: 260, flow: 187 },
           { time: "21:55", inMl: 2000, outMl: 2140, ufMl: 140, flow: 165, isLavage: true }
         ]
-      },
-      {
-        date: "2026-11-22",
-        patientWeight: DEFAULT_PATIENT_WEIGHT,
-        exchanges: [
-          { time: "07:25", inMl: 2000, outMl: 2240, ufMl: 240, flow: 183 },
-          { time: "12:30", inMl: 2000, outMl: 2200, ufMl: 200, flow: 177 },
-          { time: "17:15", inMl: 2000, outMl: 2250, ufMl: 250, flow: 181 },
-          { time: "22:10", inMl: 2000, outMl: 2220, ufMl: 220, flow: 179 }
-        ]
-      },
-      {
-        date: "2026-11-21",
-        patientWeight: DEFAULT_PATIENT_WEIGHT,
-        exchanges: [
-          { time: "07:15", inMl: 2000, outMl: 2290, ufMl: 290, flow: 192 },
-          { time: "12:10", inMl: 2000, outMl: 2250, ufMl: 250, flow: 186 },
-          { time: "17:05", inMl: 2000, outMl: 2270, ufMl: 270, flow: 188 },
-          { time: "22:00", inMl: 2000, outMl: 2230, ufMl: 230, flow: 180 }
-        ]
       }
     ];
+
+    let isSimulationMode = true;
 
     function formatSignedMl(val) {
       const n = Math.round(val);
@@ -419,6 +406,7 @@
     }
 
     function activateSimulation() {
+      isSimulationMode = true;
       document.getElementById("btnSim").classList.add("active");
       document.getElementById("btnLive").classList.remove("active");
       document.getElementById("authPanel").classList.remove("visible");
@@ -431,77 +419,64 @@
       renderTable(SIMULATION_DAYS);
     }
 
-    function toggleLivePanel() {
-      document.getElementById("btnLive").classList.add("active");
-      document.getElementById("btnSim").classList.remove("active");
-      document.getElementById("authPanel").classList.add("visible");
+    // Start w trybie symulacji (dane przykładowe)
+    activateSimulation();
 
-      const savedEmail = localStorage.getItem("pd_report_email");
-      const savedColl = localStorage.getItem("pd_report_collection");
-      if (savedEmail) document.getElementById("authEmail").value = savedEmail;
-      if (savedColl) document.getElementById("collectionName").value = savedColl;
-    }
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    function readFieldNumber(fields, key, fallback = 0) {
-      if (!fields || !fields[key]) return fallback;
-      const f = fields[key];
-      if (f.doubleValue !== undefined) return Number(f.doubleValue);
-      if (f.integerValue !== undefined) return Number(f.integerValue);
-      return fallback;
-    }
-
-    function readFieldString(fields, key, fallback = "") {
-      if (!fields || !fields[key]) return fallback;
-      return fields[key].stringValue !== undefined ? fields[key].stringValue : fallback;
-    }
-
-    async function loginAndLoadFirestore() {
-      const email = document.getElementById("authEmail").value.trim();
-      const pass = document.getElementById("authPassword").value;
-      const coll = document.getElementById("collectionName").value.trim() || "weights";
+    async function loadFromWeightsCollection() {
       const status = document.getElementById("liveStatus");
-
-      if (!email || !pass) {
-        status.textContent = "Podaj e-mail i hasło.";
-        return;
-      }
-
-      localStorage.setItem("pd_report_email", email);
-      localStorage.setItem("pd_report_collection", coll);
-
       try {
-        status.textContent = "Logowanie przez REST API...";
-        const authRes = await fetch(
-          `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password: pass, returnSecureToken: true })
-          }
+        status.textContent = "Pobieranie rekordów z kolekcji 'weights'...";
+        const q = query(
+          collection(db, COLLECTION_NAME),
+          orderBy("recorded_at", "desc"),
+          limit(300)
         );
+        const snap = await getDocs(q);
 
-        const authData = await authRes.json();
-        if (!authRes.ok || !authData.idToken) {
-          throw new Error(authData.error ? authData.error.message : "Błąd logowania");
-        }
-
-        status.textContent = "Pobieranie dokumentów z Firestore...";
-        const fsRes = await fetch(
-          `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/${encodeURIComponent(coll)}?pageSize=300`,
-          {
-            headers: { "Authorization": `Bearer ${authData.idToken}` }
-          }
-        );
-
-        const fsData = await fsRes.json();
-        if (!fsRes.ok) {
-          throw new Error(fsData.error ? fsData.error.message : "Błąd odczytu kolekcji");
-        }
-
-        const docs = fsData.documents || [];
+        // Odwracamy kolejność na chronologiczną (od rana do wieczora w obrębie dnia)
+        const docsChronological = snap.docs.map(doc => doc.data()).reverse();
         const dayMap = new Map();
-        const foundTypes = new Set();
 
-        // Sortowanie rosnąco po czasie recorded_at lub createTime
-        docs.sort((a, b) => {
-          const ta = (a.fields && a.fields.recorded_at &&
+        docsChronological.forEach(d => {
+          if (d.event_type !== "drain" && d.event_type !== "lavage_summary") return;
+
+          const ts = d.recorded_at && d.recorded_at.toDate ? d.recorded_at.toDate() : new Date();
+          const dateKey = ts.toLocaleDateString("sv-SE");
+          const timeStr = ts.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+
+          if (!dayMap.has(dateKey)) {
+            dayMap.set(dateKey, {
+              date: dateKey,
+              patientWeight: DEFAULT_PATIENT_WEIGHT,
+              exchanges: []
+            });
+          }
+
+          const isLavage = (d.event_type === "lavage_summary");
+          const outMl = isLavage
+            ? Math.round(Number(d.cumulative_weight_kg ?? 0) * 1000)
+            : Number(d.weight_g ?? Math.round(Number(d.weight_kg ?? 0) * 1000));
+
+          const inMl = isLavage
+            ? Math.round(Number(d.target_bag_kg ?? 2.0) * 1000)
+            : Math.round(Number(d.prev_fresh_kg ?? 2.0) * 1000);
+
+          const ufMl = isLavage
+            ? (d.net_uf_ml !== undefined ? Number(d.net_uf_ml) : (outMl - inMl))
+            : (d.uf_ml !== undefined ? Number(d.uf_ml) : (outMl - inMl));
+
+          dayMap.get(dateKey).exchanges.push({
+            time: timeStr,
+            inMl: inMl,
+            outMl: outMl,
+            ufMl: ufMl,
+            flow: Number(d.flow_rate_g_min ?? 0),
+            isLavage: isLavage
+          });
+        });
+
+        const sortedDays = Array.from(dayMap.values()).
