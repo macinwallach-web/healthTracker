@@ -43,7 +43,6 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
 
-    /* Pasek narzędzi (ukrywany przy druku) */
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -116,7 +115,6 @@
       border: 1px solid #22c55e;
     }
 
-    /* Panel logowania Firebase */
     .auth-panel {
       display: none;
       flex-wrap: wrap;
@@ -146,7 +144,6 @@
       color: var(--muted);
     }
 
-    /* Nagłówek dokumentu raportu */
     .report-header {
       display: flex;
       justify-content: space-between;
@@ -172,7 +169,6 @@
       font-size: 12px;
     }
 
-    /* Tabela raportu */
     .table-wrap {
       width: 100%;
       overflow-x: auto;
@@ -211,7 +207,6 @@
       background: var(--zebra);
     }
 
-    /* Szerokości kolumn dopasowane do A4 landscape */
     col.col-date    { width: 8.5%; }
     col.col-weight  { width: 7.5%; }
     col.col-ex      { width: 13.5%; }
@@ -269,7 +264,6 @@
       gap: 4px;
     }
 
-    /* Optymalizacja druku A4 Landscape */
     @page {
       size: A4 landscape;
       margin: 8mm;
@@ -353,7 +347,6 @@
 </head>
 <body>
   <div class="container">
-    <!-- Pasek sterowania -->
     <div class="toolbar no-print">
       <div class="toolbar-group">
         <button id="btnSim" class="active" onclick="activateSimulation()">Symulacja</button>
@@ -365,7 +358,6 @@
       </div>
     </div>
 
-    <!-- Panel logowania Firebase (zgodny z firebaseConfig) -->
     <div id="authPanel" class="auth-panel no-print">
       <input type="email" id="authEmail" placeholder="E-mail użytkownika" />
       <input type="password" id="authPassword" placeholder="Hasło" />
@@ -374,7 +366,6 @@
       <span id="liveStatus" class="status-msg"></span>
     </div>
 
-    <!-- Nagłówek dokumentu raportu -->
     <div class="report-header">
       <div>
         <h1>Dobowy Raport Dializy Otrzewnowej (CAPD)</h1>
@@ -386,7 +377,6 @@
       </div>
     </div>
 
-    <!-- Tabela raportu -->
     <div class="table-wrap">
       <table>
         <colgroup>
@@ -416,5 +406,8 @@
     </div>
   </div>
 
-  <!-- Firebase SDK (compat) -->
-  <script src="
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCeXDgWy4p1qQO6UI22uu1p38STXOG2UzE",
+      authDomain: "healthtracker-b7c01.firebaseapp.com",
+      projectId: "healthtracker-b
