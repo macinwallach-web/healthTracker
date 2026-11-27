@@ -458,7 +458,7 @@
     async function loginAndLoadFirestore() {
       const email = document.getElementById("authEmail").value.trim();
       const pass = document.getElementById("authPassword").value;
-      const coll = document.getElementById("collectionName").value.trim() || "dialysis_logs";
+      const coll = document.getElementById("collectionName").value.trim() || "weights";
       const status = document.getElementById("liveStatus");
 
       if (!email || !pass) {
