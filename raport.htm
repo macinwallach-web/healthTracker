@@ -116,7 +116,7 @@
       border: 1px solid #22c55e;
     }
 
-    /* Panel logowania Firebase (widoczny tylko po przełączeniu na tryb Live) */
+    /* Panel logowania Firebase */
     .auth-panel {
       display: none;
       flex-wrap: wrap;
@@ -124,7 +124,7 @@
       align-items: center;
       background: #f8fafc;
       border: 1px solid var(--border);
-      padding: 10px;
+      padding: 10px 12px;
       border-radius: 5px;
       margin-bottom: 14px;
     }
@@ -134,11 +134,11 @@
     }
 
     .auth-panel input {
-      padding: 6px 8px;
+      padding: 6px 9px;
       border: 1px solid var(--border);
       border-radius: 4px;
-      font-size: 12px;
-      min-width: 170px;
+      font-size: 13px;
+      min-width: 190px;
     }
 
     .status-msg {
@@ -356,7 +356,7 @@
     <!-- Pasek sterowania -->
     <div class="toolbar no-print">
       <div class="toolbar-group">
-        <button id="btnSim" class="active" onclick="activateSimulation()">Symulacja (dane przykładowe)</button>
+        <button id="btnSim" class="active" onclick="activateSimulation()">Symulacja</button>
         <button id="btnLive" onclick="toggleLivePanel()">Dane z Firestore</button>
         <span id="modeBadge" class="badge badge-sim">Tryb symulacji</span>
       </div>
@@ -365,19 +365,56 @@
       </div>
     </div>
 
-    <!-- Panel konfiguracji Firestore (ukryty w trybie symulacji) -->
+    <!-- Panel logowania Firebase (zgodny z firebaseConfig) -->
     <div id="authPanel" class="auth-panel no-print">
-      <input type="text" id="cfgApiKey" placeholder="Firebase API Key" />
-      <input type="text" id="cfgProjectId" placeholder="Project ID" />
-      <input type="text" id="cfgCollection" placeholder="Kolekcja (np. dialysis_logs)" />
-      <input type="email" id="cfgEmail" placeholder="Email użytkownika" />
-      <input type="password" id="cfgPass" placeholder="Hasło" />
-      <button onclick="loadFirestoreData()">Pobierz dane</button>
+      <input type="email" id="authEmail" placeholder="E-mail użytkownika" />
+      <input type="password" id="authPassword" placeholder="Hasło" />
+      <input type="text" id="collectionName" value="dialysis_logs" placeholder="Kolekcja Firestore" />
+      <button onclick="loginAndLoadFirestore()">Zaloguj i pobierz dane</button>
       <span id="liveStatus" class="status-msg"></span>
     </div>
 
-    <!-- Nagłówek raportu widoczny na wydruku -->
+    <!-- Nagłówek dokumentu raportu -->
     <div class="report-header">
       <div>
         <h1>Dobowy Raport Dializy Otrzewnowej (CAPD)</h1>
-        <div class="report-meta" id="reportSubtitle">Źródło danych: Symulacja (zestaw demonstr
+        <div class="report-meta" id="reportSubtitle">Źródło danych: Symulacja (dane przykładowe)</div>
+      </div>
+      <div class="report-patient">
+        <div><strong>Masa ciała (ref.):</strong> 85.0 kg</div>
+        <div><strong>Standardowy płyn:</strong> 1,5% Glukoza (1,22 Ca)</div>
+      </div>
+    </div>
+
+    <!-- Tabela raportu -->
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col class="col-date" />
+          <col class="col-weight" />
+          <col class="col-ex" />
+          <col class="col-ex" />
+          <col class="col-ex" />
+          <col class="col-ex" />
+          <col class="col-fluid" />
+          <col class="col-summary" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Dzień</th>
+            <th>Waga pacjenta</th>
+            <th>Wymiana 1<small>Wlew / Drenaż / UF</small></th>
+            <th>Wymiana 2<small>Wlew / Drenaż / UF</small></th>
+            <th>Wymiana 3<small>Wlew / Drenaż / UF</small></th>
+            <th>Wymiana 4<small>Wlew / Drenaż / UF</small></th>
+            <th>Użyte płyny</th>
+            <th>Suma parametrów wymiany<small>Wlew / Drenaż / UF / Śr. przepływ</small></th>
+          </tr>
+        </thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (compat) -->
+  <script src="
