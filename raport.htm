@@ -19,9 +19,7 @@
       --accent: #2563eb;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -70,13 +68,9 @@
       border-radius: 5px;
       font-size: 13px;
       font-weight: 600;
-      transition: background 0.15s, border-color 0.15s;
     }
 
-    button:hover {
-      background: #f1f5f9;
-    }
-
+    button:hover { background: #f1f5f9; }
     button.active {
       background: var(--accent);
       color: #ffffff;
@@ -88,10 +82,7 @@
       color: #ffffff;
       border-color: #0f172a;
     }
-
-    button.print-btn:hover {
-      background: #334155;
-    }
+    button.print-btn:hover { background: #334155; }
 
     .badge {
       display: inline-block;
@@ -100,20 +91,9 @@
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.3px;
     }
-
-    .badge-sim {
-      background: #fef3c7;
-      color: #92400e;
-      border: 1px solid #f59e0b;
-    }
-
-    .badge-live {
-      background: #dcfce7;
-      color: #166534;
-      border: 1px solid #22c55e;
-    }
+    .badge-sim { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+    .badge-live { background: #dcfce7; color: #166534; border: 1px solid #22c55e; }
 
     .auth-panel {
       display: none;
@@ -126,23 +106,17 @@
       border-radius: 5px;
       margin-bottom: 14px;
     }
-
-    .auth-panel.visible {
-      display: flex;
-    }
+    .auth-panel.visible { display: flex; }
 
     .auth-panel input {
       padding: 6px 9px;
       border: 1px solid var(--border);
       border-radius: 4px;
       font-size: 13px;
-      min-width: 190px;
+      min-width: 180px;
     }
 
-    .status-msg {
-      font-size: 12px;
-      color: var(--muted);
-    }
+    .status-msg { font-size: 12px; color: var(--muted); }
 
     .report-header {
       display: flex;
@@ -152,27 +126,11 @@
       padding-bottom: 8px;
       border-bottom: 2px solid #0f172a;
     }
+    .report-header h1 { margin: 0 0 3px 0; font-size: 18px; color: #0f172a; }
+    .report-meta { font-size: 12px; color: var(--muted); }
+    .report-patient { text-align: right; font-size: 12px; }
 
-    .report-header h1 {
-      margin: 0 0 3px 0;
-      font-size: 18px;
-      color: #0f172a;
-    }
-
-    .report-meta {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .report-patient {
-      text-align: right;
-      font-size: 12px;
-    }
-
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-    }
+    .table-wrap { width: 100%; overflow-x: auto; }
 
     table {
       width: 100%;
@@ -203,9 +161,7 @@
       margin-top: 2px;
     }
 
-    tbody tr:nth-child(even) {
-      background: var(--zebra);
-    }
+    tbody tr:nth-child(even) { background: var(--zebra); }
 
     col.col-date    { width: 8.5%; }
     col.col-weight  { width: 7.5%; }
@@ -213,61 +169,19 @@
     col.col-fluid   { width: 14%; }
     col.col-summary { width: 16%; }
 
-    .cell-date {
-      font-weight: 700;
-      text-align: center;
-      white-space: nowrap;
-    }
-
-    .cell-weight {
-      text-align: center;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .cell-ex {
-      text-align: center;
-      font-size: 11.5px;
-    }
-
-    .ex-vol {
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .ex-uf {
-      font-weight: 700;
-      font-size: 12px;
-    }
-
-    .ex-time {
-      font-size: 10px;
-      color: #64748b;
-    }
-
+    .cell-date { font-weight: 700; text-align: center; white-space: nowrap; }
+    .cell-weight { text-align: center; font-weight: 600; white-space: nowrap; }
+    .cell-ex { text-align: center; font-size: 11.5px; }
+    .ex-vol { color: var(--muted); font-size: 11px; }
+    .ex-uf { font-weight: 700; font-size: 12px; }
+    .ex-time { font-size: 10px; color: #64748b; }
     .uf-pos { color: var(--pos); }
     .uf-neg { color: var(--neg); }
+    .cell-fluid { font-size: 11px; text-align: center; }
+    .cell-summary { font-size: 11.5px; line-height: 1.35; }
+    .sum-line { display: flex; justify-content: space-between; gap: 4px; }
 
-    .cell-fluid {
-      font-size: 11px;
-      text-align: center;
-    }
-
-    .cell-summary {
-      font-size: 11.5px;
-      line-height: 1.35;
-    }
-
-    .sum-line {
-      display: flex;
-      justify-content: space-between;
-      gap: 4px;
-    }
-
-    @page {
-      size: A4 landscape;
-      margin: 8mm;
-    }
+    @page { size: A4 landscape; margin: 8mm; }
 
     @media print {
       body {
@@ -278,67 +192,19 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
-
-      .container {
-        max-width: 100%;
-        width: 100%;
-        border: none;
-        box-shadow: none;
-        padding: 0;
-        margin: 0;
-      }
-
-      .toolbar,
-      .auth-panel,
-      .no-print {
-        display: none !important;
-      }
-
-      .report-header {
-        margin-bottom: 8px;
-        padding-bottom: 5px;
-      }
-
-      .report-header h1 {
-        font-size: 14pt;
-      }
-
-      .table-wrap {
-        overflow: visible;
-      }
-
-      table {
-        width: 100%;
-        page-break-inside: auto;
-      }
-
-      thead {
-        display: table-header-group;
-      }
-
-      tr {
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-
-      th {
-        background: #1e293b !important;
-        color: #ffffff !important;
-        font-size: 8.5pt;
-        padding: 4px 4px;
-      }
-
-      th small {
-        font-size: 7.5pt;
-      }
-
-      td {
-        padding: 4px 4px;
-        font-size: 8.5pt;
-      }
-
+      .container { max-width: 100%; width: 100%; border: none; box-shadow: none; padding: 0; margin: 0; }
+      .toolbar, .auth-panel, .no-print { display: none !important; }
+      .report-header { margin-bottom: 8px; padding-bottom: 5px; }
+      .report-header h1 { font-size: 14pt; }
+      .table-wrap { overflow: visible; }
+      table { width: 100%; page-break-inside: auto; }
+      thead { display: table-header-group; }
+      tr { break-inside: avoid; page-break-inside: avoid; }
+      th { background: #1e293b !important; color: #ffffff !important; font-size: 8.5pt; padding: 4px; }
+      th small { font-size: 7.5pt; }
+      td { padding: 4px; font-size: 8.5pt; }
       .ex-vol { font-size: 8pt; }
-      .ex-uf  { font-size: 8.5pt; }
+      .ex-uf { font-size: 8.5pt; }
       .ex-time { font-size: 7.5pt; }
       .cell-fluid { font-size: 8pt; }
       .cell-summary { font-size: 8pt; }
@@ -349,12 +215,12 @@
   <div class="container">
     <div class="toolbar no-print">
       <div class="toolbar-group">
-        <button id="btnSim" class="active" onclick="activateSimulation()">Symulacja</button>
-        <button id="btnLive" onclick="toggleLivePanel()">Dane z Firestore</button>
+        <button id="btnSim" class="active" type="button" onclick="activateSimulation()">Symulacja</button>
+        <button id="btnLive" type="button" onclick="toggleLivePanel()">Dane z Firestore</button>
         <span id="modeBadge" class="badge badge-sim">Tryb symulacji</span>
       </div>
       <div class="toolbar-group">
-        <button class="print-btn" onclick="window.print()">Drukuj raport (A4)</button>
+        <button class="print-btn" type="button" onclick="window.print()">Drukuj raport (A4)</button>
       </div>
     </div>
 
@@ -362,7 +228,7 @@
       <input type="email" id="authEmail" placeholder="E-mail użytkownika" />
       <input type="password" id="authPassword" placeholder="Hasło" />
       <input type="text" id="collectionName" value="dialysis_logs" placeholder="Kolekcja Firestore" />
-      <button onclick="loginAndLoadFirestore()">Zaloguj i pobierz dane</button>
+      <button type="button" onclick="loginAndLoadFirestore()">Zaloguj i pobierz dane</button>
       <span id="liveStatus" class="status-msg"></span>
     </div>
 
@@ -410,4 +276,232 @@
     const firebaseConfig = {
       apiKey: "AIzaSyCeXDgWy4p1qQO6UI22uu1p38STXOG2UzE",
       authDomain: "healthtracker-b7c01.firebaseapp.com",
-      projectId: "healthtracker-b
+      projectId: "healthtracker-b7c01",
+      storageBucket: "healthtracker-b7c01.firebasestorage.app",
+      messagingSenderId: "907017911490",
+      appId: "1:907017911490:web:0692513b3ac12491368f5b"
+    };
+
+    const DEFAULT_PATIENT_WEIGHT = "85.0 kg";
+    const DEFAULT_FLUID_LABEL = "1,5% Glukoza 1,22 Ca";
+
+    const SIMULATION_DAYS = [
+      {
+        date: "2026-11-27",
+        patientWeight: DEFAULT_PATIENT_WEIGHT,
+        exchanges: [
+          { time: "07:15", inMl: 2000, outMl: 2260, ufMl: 260, flow: 188 },
+          { time: "12:10", inMl: 2000, outMl: 2210, ufMl: 210, flow: 182 },
+          { time: "17:05", inMl: 2000, outMl: 2290, ufMl: 290, flow: 191 },
+          { time: "22:00", inMl: 2000, outMl: 2240, ufMl: 240, flow: 179 }
+        ]
+      },
+      {
+        date: "2026-11-26",
+        patientWeight: DEFAULT_PATIENT_WEIGHT,
+        exchanges: [
+          { time: "07:20", inMl: 2000, outMl: 2230, ufMl: 230, flow: 180 },
+          { time: "12:15", inMl: 2000, outMl: 2180, ufMl: 180, flow: 174 },
+          { time: "17:10", inMl: 2000, outMl: 2250, ufMl: 250, flow: 185 },
+          { time: "22:05", inMl: 2000, outMl: 2220, ufMl: 220, flow: 176 }
+        ]
+      },
+      {
+        date: "2026-11-25",
+        patientWeight: DEFAULT_PATIENT_WEIGHT,
+        exchanges: [
+          { time: "07:10", inMl: 2000, outMl: 2310, ufMl: 310, flow: 195 },
+          { time: "12:00", inMl: 2000, outMl: 2240, ufMl: 240, flow: 186 },
+          { time: "17:20", inMl: 2000, outMl: 2270, ufMl: 270, flow: 189 },
+          { time: "22:15", inMl: 2000, outMl: 2250, ufMl: 250, flow: 181 }
+        ]
+      },
+      {
+        date: "2026-11-24",
+        patientWeight: DEFAULT_PATIENT_WEIGHT,
+        exchanges: [
+          { time: "07:30", inMl: 2000, outMl: 2190, ufMl: 190, flow: 172 },
+          { time: "12:25", inMl: 2000, outMl: 2160, ufMl: 160, flow: 168 },
+          { time: "17:15", inMl: 2000, outMl: 2210, ufMl: 210, flow: 175 },
+          { time: "22:10", inMl: 2000, outMl: 2200, ufMl: 200, flow: 171 }
+        ]
+      },
+      {
+        date: "2026-11-23",
+        patientWeight: DEFAULT_PATIENT_WEIGHT,
+        exchanges: [
+          { time: "07:05", inMl: 2000, outMl: 2280, ufMl: 280, flow: 190 },
+          { time: "12:05", inMl: 2000, outMl: 2230, ufMl: 230, flow: 184 },
+          { time: "17:00", inMl: 2000, outMl: 2260, ufMl: 260, flow: 187 },
+          { time: "21:55", inMl: 2000, outMl: 2140, ufMl: 140, flow: 165, isLavage: true }
+        ]
+      },
+      {
+        date: "2026-11-22",
+        patientWeight: DEFAULT_PATIENT_WEIGHT,
+        exchanges: [
+          { time: "07:25", inMl: 2000, outMl: 2240, ufMl: 240, flow: 183 },
+          { time: "12:30", inMl: 2000, outMl: 2200, ufMl: 200, flow: 177 },
+          { time: "17:15", inMl: 2000, outMl: 2250, ufMl: 250, flow: 181 },
+          { time: "22:10", inMl: 2000, outMl: 2220, ufMl: 220, flow: 179 }
+        ]
+      },
+      {
+        date: "2026-11-21",
+        patientWeight: DEFAULT_PATIENT_WEIGHT,
+        exchanges: [
+          { time: "07:15", inMl: 2000, outMl: 2290, ufMl: 290, flow: 192 },
+          { time: "12:10", inMl: 2000, outMl: 2250, ufMl: 250, flow: 186 },
+          { time: "17:05", inMl: 2000, outMl: 2270, ufMl: 270, flow: 188 },
+          { time: "22:00", inMl: 2000, outMl: 2230, ufMl: 230, flow: 180 }
+        ]
+      }
+    ];
+
+    function formatSignedMl(val) {
+      const n = Math.round(val);
+      return (n >= 0 ? "+" : "") + n + " ml";
+    }
+
+    function renderExchangeCell(ex) {
+      if (!ex) return `<td class="cell-ex">—</td>`;
+      const ufClass = ex.ufMl >= 0 ? "uf-pos" : "uf-neg";
+      const tag = ex.isLavage ? " (płuk.)" : "";
+      return `
+        <td class="cell-ex">
+          <div class="ex-vol">${ex.inMl} / ${ex.outMl} ml</div>
+          <div class="ex-uf ${ufClass}">${formatSignedMl(ex.ufMl)}</div>
+          <div class="ex-time">${ex.time}${tag}</div>
+        </td>
+      `;
+    }
+
+    function renderTable(days) {
+      const tbody = document.getElementById("reportBody");
+      if (!days || days.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:16px;">Brak rekordów do wyświetlenia.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = days.map(day => {
+        const list = day.exchanges || [];
+        let totalIn = 0, totalOut = 0, totalUf = 0, flowSum = 0, flowCount = 0;
+
+        list.forEach(ex => {
+          totalIn += ex.inMl || 0;
+          totalOut += ex.outMl || 0;
+          totalUf += ex.ufMl || 0;
+          if (ex.flow > 0) { flowSum += ex.flow; flowCount++; }
+        });
+
+        const avgFlow = flowCount > 0 ? Math.round(flowSum / flowCount) : 0;
+        const ufClass = totalUf >= 0 ? "uf-pos" : "uf-neg";
+        const fluidsText = list.length > 0 ? `${list.length} × ${DEFAULT_FLUID_LABEL}` : "—";
+
+        return `
+          <tr>
+            <td class="cell-date">${day.date}</td>
+            <td class="cell-weight">${day.patientWeight || DEFAULT_PATIENT_WEIGHT}</td>
+            ${renderExchangeCell(list[0])}
+            ${renderExchangeCell(list[1])}
+            ${renderExchangeCell(list[2])}
+            ${renderExchangeCell(list[3])}
+            <td class="cell-fluid">${fluidsText}</td>
+            <td class="cell-summary">
+              <div class="sum-line"><span>Wlew:</span><strong>${totalIn} ml</strong></div>
+              <div class="sum-line"><span>Drenaż:</span><strong>${totalOut} ml</strong></div>
+              <div class="sum-line"><span>UF dobowe:</span><strong class="${ufClass}">${formatSignedMl(totalUf)}</strong></div>
+              <div class="sum-line"><span>Śr. przepływ:</span><span>${avgFlow} g/min</span></div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function activateSimulation() {
+      document.getElementById("btnSim").classList.add("active");
+      document.getElementById("btnLive").classList.remove("active");
+      document.getElementById("authPanel").classList.remove("visible");
+
+      const badge = document.getElementById("modeBadge");
+      badge.className = "badge badge-sim";
+      badge.textContent = "Tryb symulacji";
+
+      document.getElementById("reportSubtitle").textContent = "Źródło danych: Symulacja (dane przykładowe)";
+      renderTable(SIMULATION_DAYS);
+    }
+
+    function toggleLivePanel() {
+      document.getElementById("btnLive").classList.add("active");
+      document.getElementById("btnSim").classList.remove("active");
+      document.getElementById("authPanel").classList.add("visible");
+
+      const savedEmail = localStorage.getItem("pd_report_email");
+      const savedColl = localStorage.getItem("pd_report_collection");
+      if (savedEmail) document.getElementById("authEmail").value = savedEmail;
+      if (savedColl) document.getElementById("collectionName").value = savedColl;
+    }
+
+    function readFieldNumber(fields, key, fallback = 0) {
+      if (!fields || !fields[key]) return fallback;
+      const f = fields[key];
+      if (f.doubleValue !== undefined) return Number(f.doubleValue);
+      if (f.integerValue !== undefined) return Number(f.integerValue);
+      return fallback;
+    }
+
+    function readFieldString(fields, key, fallback = "") {
+      if (!fields || !fields[key]) return fallback;
+      return fields[key].stringValue !== undefined ? fields[key].stringValue : fallback;
+    }
+
+    async function loginAndLoadFirestore() {
+      const email = document.getElementById("authEmail").value.trim();
+      const pass = document.getElementById("authPassword").value;
+      const coll = document.getElementById("collectionName").value.trim() || "dialysis_logs";
+      const status = document.getElementById("liveStatus");
+
+      if (!email || !pass) {
+        status.textContent = "Podaj e-mail i hasło.";
+        return;
+      }
+
+      localStorage.setItem("pd_report_email", email);
+      localStorage.setItem("pd_report_collection", coll);
+
+      try {
+        status.textContent = "Logowanie przez REST API...";
+        const authRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password: pass, returnSecureToken: true })
+          }
+        );
+
+        const authData = await authRes.json();
+        if (!authRes.ok || !authData.idToken) {
+          throw new Error(authData.error ? authData.error.message : "Błąd logowania");
+        }
+
+        status.textContent = "Pobieranie dokumentów z Firestore...";
+        const fsRes = await fetch(
+          `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/${encodeURIComponent(coll)}?pageSize=300`,
+          {
+            headers: { "Authorization": `Bearer ${authData.idToken}` }
+          }
+        );
+
+        const fsData = await fsRes.json();
+        if (!fsRes.ok) {
+          throw new Error(fsData.error ? fsData.error.message : "Błąd odczytu kolekcji");
+        }
+
+        const docs = fsData.documents || [];
+        const dayMap = new Map();
+        const foundTypes = new Set();
+
+        // Sortowanie rosnąco po czasie recorded_at lub createTime
+        docs.sort((a, b) => {
+          const ta = (a.fields && a.fields.recorded_at &&
